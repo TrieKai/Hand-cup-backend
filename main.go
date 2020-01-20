@@ -1,62 +1,69 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
+	"net/http"
 
-	_ "github.com/go-sql-driver/mysql" //加载mysql
-	"github.com/jinzhu/gorm"           //gorm 扩展包
+	"github.com/gorilla/mux"
 )
 
-//注意如果 定义成小写username 引用时 无法调用
-type User struct {
-	ID       int64  // 列名为 `id`
-	Username string // 列名为 `username`
-	Password string // 列名为 `password`
+type Person struct {
+	ID        string   `json:"id,omitemty"`
+	Firstname string   `json:"firstname,omitempty"`
+	Lastname  string   `json:"lastname,omitempty"`
+	Address   *Address `json:"address,omitempty"`
 }
 
-//设置表名
-func (User) TableName() string {
-	return "users"
+type Address struct {
+	City     string `json:"city,omitempty"`
+	Province string `json:"province,omitempty"`
+}
+
+var people []Person
+
+func GetPerson(w http.ResponseWriter, req *http.Request) {
+	params := mux.Vars(req)
+	for _, item := range people {
+		if item.ID == params["id"] {
+			json.NewEncoder(w).Encode(item)
+			return
+		}
+	}
+	json.NewEncoder(w).Encode(people)
+}
+
+func GetPeople(w http.ResponseWriter, req *http.Request) {
+	json.NewEncoder(w).Encode(people)
+}
+
+func PostPerson(w http.ResponseWriter, req *http.Request) {
+	params := mux.Vars(req)
+	var person Person
+	_ = json.NewDecoder(req.Body).Decode(&person)
+	person.ID = params["id"]
+	people = append(people, person)
+	json.NewEncoder(w).Encode(people)
+}
+
+func DeletePerson(w http.ResponseWriter, req *http.Request) {
+	params := mux.Vars(req)
+	for index, item := range people {
+		if item.ID == params["id"] {
+			people = append(people[:index], people[index+1:]...)
+			break
+		}
+	}
+	json.NewEncoder(w).Encode(people)
 }
 
 func main() {
-	db, err := gorm.Open("mysql", "root:TrieIsHandsomeMan!@tcp(localhost:3306)/hand_cup?charset=utf8&parseTime=True&loc=Local&timeout=10ms")
-	defer db.Close()
-	if err != nil {
-		fmt.Printf("mysql connect error %v", err)
-	}
-
-	//执行迁移文件 生成数据表
-	db.CreateTable(&User{})
-
-	//添加数据
-	user := User{Username: "root", Password: "root"}
-	result := db.Create(&user)
-
-	if result.Error != nil {
-		fmt.Printf("insert row err %v", result.Error)
-		return
-	}
-
-	fmt.Println(user.ID) //返回id
-
-	//查询单条数据
-	getUser := User{}
-
-	//SELECT id, first FROM users WHERE id = 1 LIMIT 1;
-	db.Select([]string{"id", "username"}).First(&getUser, 1)
-	fmt.Println(getUser) //打印查询数据
-
-	//修改数据
-	user.Username = "update username"
-	user.Password = "update password"
-	db.Save(&user)
-
-	//查询列表数据
-	users := []User{}
-	db.Find(&users)
-	fmt.Println(&users) //获取所有数据
-
-	//删除数据
-	db.Delete(&user)
+	router := mux.NewRouter()
+	people = append(people, Person{ID: "1", Firstname: "xi", Lastname: "dada", Address: &Address{City: "Shenyang", Province: "Liaoning"}})
+	people = append(people, Person{ID: "2", Firstname: "li", Lastname: "xiansheng", Address: &Address{City: "Changchun", Province: "Jinlin"}})
+	router.HandleFunc("/people", GetPeople).Methods("GET")
+	router.HandleFunc("/people/{id}", GetPerson).Methods("GET")
+	router.HandleFunc("/people/{id}", PostPerson).Methods("POST")
+	router.HandleFunc("/people/{id}", DeletePerson).Methods("DELETE")
+	log.Fatal(http.ListenAndServe(":12345", router))
 }
