@@ -12,7 +12,7 @@ type HistoryResult struct {
 	ID          uint32      `gorm:"primary_key;auto_increment" json:"id"`
 	HandcupId   string      `gorm:"size:45;not null;unique" json:"handcup_id"`
 	HandcupInfo HandcupInfo `json:"handcupInfo"`
-	Distance    uint32      `gorm:"size:45;not null;unique" json:"distance"`
+	Distance    uint32      `gorm:"not null;unique" json:"distance"`
 	CreateTime  time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"create_time"`
 	UpdateTime  time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }

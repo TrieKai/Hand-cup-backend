@@ -13,10 +13,10 @@ type HandcupInfo struct {
 	ID         uint32    `gorm:"primary_key;auto_increment" json:"id"`
 	GoogleId   string    `gorm:"size:45;not null;unique" json:"google_id"`
 	Name       string    `gorm:"size:45;not null;unique" json:"name"`
-	Latitude   uint32    `json:"latitude"`
-	Longitude  uint32    `json:"longitude"`
+	Latitude   float32    `json:"latitude"`
+	Longitude  float32    `json:"longitude"`
 	ImageUrl   string    `gorm:"size:100;" json:"image_url"`
-	Rating     uint32    `json:"rating"`
+	Rating     float32    `json:"rating"`
 	CreateTime time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"create_time"`
 	UpdateTime time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }

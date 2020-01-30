@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"handCup-project-backend/api/controllers"
-	"handCup-project-backend/api/seed"
 
 	"github.com/joho/godotenv"
 )
@@ -24,7 +23,7 @@ func Run() {
 
 	server.Initialize(os.Getenv("DB_DRIVER"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_PORT"), os.Getenv("DB_HOST"), os.Getenv("DB_NAME"))
 
-	seed.Load(server.DB)
+	// seed.Load(server.DB)
 
 	server.Run(":8080")
 }
