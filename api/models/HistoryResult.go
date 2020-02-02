@@ -8,16 +8,19 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-type HistoryResult struct {
-	ID          uint32      `gorm:"primary_key;auto_increment" json:"id"`
-	HandcupId   string      `gorm:"size:45;not null;unique" json:"handcup_id"`
-	HandcupInfo HandcupInfo `json:"handcupInfo"`
-	Distance    uint32      `gorm:"not null;unique" json:"distance"`
-	CreateTime  time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"create_time"`
-	UpdateTime  time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
+type HistoryRequest struct {
+	ID           uint32      `gorm:"primary_key;auto_increment" json:"id"`
+	GroupId      uint32      `grom:"not null;" json:"group_id"`
+	HandcupId    string      `gorm:"size:45;not null;unique" json:"handcup_id"`
+	HandcupInfo  HandcupInfo `json:"handcupInfo"`
+	ReqLatitude  float64     `grom:"not null;" json:"req_latitude"`
+	ReqLongitute float64     `grom:"not null;" json:"req_longitude"`
+	Distance     uint32      `gorm:"not null;" json:"distance"`
+	CreateTime   time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"create_time"`
+	UpdateTime   time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
-func (h *HistoryResult) Prepare() {
+func (h *HistoryRequest) Prepare() {
 	h.ID = 0
 	h.HandcupId = html.EscapeString(strings.TrimSpace(h.HandcupId))
 	h.HandcupInfo = HandcupInfo{}
@@ -26,65 +29,65 @@ func (h *HistoryResult) Prepare() {
 	h.UpdateTime = time.Now()
 }
 
-func (h *HistoryResult) SaveHistoryResult(db *gorm.DB) (*HistoryResult, error) {
+func (h *HistoryRequest) SaveHistoryRequest(db *gorm.DB) (*HistoryRequest, error) {
 	var err error
-	err = db.Debug().Model(&HistoryResult{}).Create(&h).Error
+	err = db.Debug().Model(&HistoryRequest{}).Create(&h).Error
 	if err != nil {
-		return &HistoryResult{}, err
+		return &HistoryRequest{}, err
 	}
 	if h.ID != 0 {
 		err = db.Debug().Model(&HandcupInfo{}).Where("id = ?", h.HandcupId).Take(&h.HandcupInfo).Error
 		if err != nil {
-			return &HistoryResult{}, err
+			return &HistoryRequest{}, err
 		}
 	}
 	return h, nil
 }
 
-func (h *HistoryResult) FindAllHistoryResults(db *gorm.DB) (*[]HistoryResult, error) {
+func (h *HistoryRequest) FindAllHistoryRequests(db *gorm.DB) (*[]HistoryRequest, error) {
 	var err error
-	HistoryResults := []HistoryResult{}
-	err = db.Debug().Model(&HistoryResult{}).Limit(100).Find(&HistoryResults).Error
+	HistoryRequests := []HistoryRequest{}
+	err = db.Debug().Model(&HistoryRequest{}).Limit(100).Find(&HistoryRequests).Error
 	if err != nil {
-		return &[]HistoryResult{}, err
+		return &[]HistoryRequest{}, err
 	}
-	if len(HistoryResults) > 0 {
-		for i, _ := range HistoryResults {
-			err := db.Debug().Model(&HandcupInfo{}).Where("id = ?", HistoryResults[i].HandcupId).Take(&HistoryResults[i].HandcupInfo).Error
+	if len(HistoryRequests) > 0 {
+		for i, _ := range HistoryRequests {
+			err := db.Debug().Model(&HandcupInfo{}).Where("id = ?", HistoryRequests[i].HandcupId).Take(&HistoryRequests[i].HandcupInfo).Error
 			if err != nil {
-				return &[]HistoryResult{}, err
+				return &[]HistoryRequest{}, err
 			}
 		}
 	}
-	return &HistoryResults, nil
+	return &HistoryRequests, nil
 }
 
-func (h *HistoryResult) FindHistoryResultByID(db *gorm.DB, pid uint64) (*HistoryResult, error) {
+func (h *HistoryRequest) FindHistoryRequestByID(db *gorm.DB, pid uint64) (*HistoryRequest, error) {
 	var err error
-	err = db.Debug().Model(&HistoryResult{}).Where("id = ?", pid).Take(&h).Error
+	err = db.Debug().Model(&HistoryRequest{}).Where("id = ?", pid).Take(&h).Error
 	if err != nil {
-		return &HistoryResult{}, err
+		return &HistoryRequest{}, err
 	}
 	if h.ID != 0 {
 		err = db.Debug().Model(&HandcupInfo{}).Where("id = ?", h.HandcupId).Take(&h.HandcupInfo).Error
 		if err != nil {
-			return &HistoryResult{}, err
+			return &HistoryRequest{}, err
 		}
 	}
 	return h, nil
 }
 
-func (h *HistoryResult) UpdateAHistoryResult(db *gorm.DB, uid uint32) (*HistoryResult, error) {
+func (h *HistoryRequest) UpdateAHistoryRequest(db *gorm.DB, uid uint32) (*HistoryRequest, error) {
 	var err error
 
-	err = db.Debug().Model(&HistoryResult{}).Where("id = ?", h.ID).Updates(HistoryResult{Distance: h.Distance, UpdateTime: time.Now()}).Error
+	err = db.Debug().Model(&HistoryRequest{}).Where("id = ?", h.ID).Updates(HistoryRequest{Distance: h.Distance, UpdateTime: time.Now()}).Error
 	if err != nil {
-		return &HistoryResult{}, err
+		return &HistoryRequest{}, err
 	}
 	if h.ID != 0 {
 		err = db.Debug().Model(&HandcupInfo{}).Where("id = ?", h.HandcupId).Take(&h.HandcupInfo).Error
 		if err != nil {
-			return &HistoryResult{}, err
+			return &HistoryRequest{}, err
 		}
 	}
 	return h, nil
