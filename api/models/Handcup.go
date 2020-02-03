@@ -12,13 +12,14 @@ import (
 type HandcupInfo struct {
 	ID             uint32    `gorm:"primary_key;auto_increment" json:"id"`
 	GoogleId       string    `gorm:"size:45;not null;unique" json:"google_id"`
+	PlaceId        string    `gorm:"size:45;not null;unique" json:"place_id"`
 	Name           string    `gorm:"size:45;not null;unique" json:"name"`
 	Latitude       float64   `json:"latitude"`
 	Longitude      float64   `json:"longitude"`
 	Rating         float32   `json:"rating"`
 	ImageReference string    `json:"image_reference"`
 	ImageWidth     int       `json:"image_width"`
-	ImageHeigth    int       `json:"image_height"`
+	ImageHeight    int       `json:"image_height"`
 	ImageUrl       string    `gorm:"size:100;" json:"image_url"`
 	CreateTime     time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"create_time"`
 	UpdateTime     time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
@@ -27,13 +28,14 @@ type HandcupInfo struct {
 func (h *HandcupInfo) Prepare() {
 	h.ID = 0
 	h.GoogleId = html.EscapeString(strings.TrimSpace(h.GoogleId))
+	h.PlaceId = html.EscapeString(strings.TrimSpace(h.GoogleId))
 	h.Name = html.EscapeString(strings.TrimSpace(h.Name))
 	h.Latitude = 0
 	h.Longitude = 0
 	h.Rating = 0
 	h.ImageReference = html.EscapeString(strings.TrimSpace(h.ImageReference))
 	h.ImageWidth = 0
-	h.ImageHeigth = 0
+	h.ImageHeight = 0
 	h.ImageUrl = html.EscapeString(strings.TrimSpace(h.ImageUrl))
 	h.CreateTime = time.Now()
 	h.UpdateTime = time.Now()

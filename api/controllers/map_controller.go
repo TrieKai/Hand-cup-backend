@@ -3,8 +3,10 @@ package controllers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"handCup-project-backend/api/models"
 	"handCup-project-backend/api/responses"
+	formaterror "handCup-project-backend/api/utils"
 	"log"
 	"net/http"
 	"os"
@@ -14,20 +16,32 @@ import (
 	"googlemaps.github.io/maps"
 )
 
+type handleMapParms struct {
+	nextToken string
+	w         http.ResponseWriter
+	r         *http.Request
+}
+
+type saveResultsParms struct {
+	results []maps.PlacesSearchResult
+	w       http.ResponseWriter
+	r       *http.Request
+}
+
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	HistoryRequest := models.HistoryRequest{}
-
+	fmt.Print(r)
 	groupResults, err := HistoryRequest.FindAllHistoryRequests(server.DB)
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
 		return
 	}
 	responses.JSON(w, http.StatusOK, groupResults)
-	server.HandleMap()
+	server.handleMap(handleMapParms{w: w, r: r})
 }
 
-func (server *Server) HandleMap(nextToken ...string) {
-	key, err := server.LoadGoogleKey()
+func (server *Server) handleMap(parms handleMapParms) {
+	key, err := server.loadGoogleKey()
 	if err != nil {
 		log.Fatalf("Load API key fatal error: %s", err)
 	}
@@ -42,8 +56,8 @@ func (server *Server) HandleMap(nextToken ...string) {
 		Radius:   5,
 		Keyword:  "飲料店",
 	}
-	if len(nextToken) != 0 {
-		r.PageToken = nextToken[0]
+	if len(parms.nextToken) != 0 {
+		r.PageToken = parms.nextToken
 	}
 	resp, err := c.NearbySearch(context.Background(), r)
 	if err != nil {
@@ -51,59 +65,65 @@ func (server *Server) HandleMap(nextToken ...string) {
 	}
 
 	if resp.NextPageToken != "" {
-		server.HandleMap(resp.NextPageToken)
+		server.handleMap(handleMapParms{nextToken: resp.NextPageToken})
 	}
 
-	server.SaveResults(resp.Results)
+	server.saveResults(saveResultsParms{results: resp.Results, w: parms.w, r: parms.r})
 }
 
-func (server *Server) SaveResults(results []maps.PlacesSearchResult) {
+func (server *Server) saveResults(parms saveResultsParms) {
 
-	for _, s := range results {
-		// handcupInfo := models.HandcupInfo{
-		// 	GoogleId:       s.PlaceID,
-		// 	Name:           s.Name,
-		// 	Latitude:       s.Geometry.Location.Lat,
-		// 	Longitude:      s.Geometry.Location.Lng,
-		// 	Rating:         s.Rating,
-		// 	ImageReference: s.Photos[0].PhotoReference,
-		// 	ImageWidth:     s.Photos[0].Width,
-		// 	ImageHeigth:    s.Photos[0].Height,
-		// 	// ImageUrl:       server.RequestPhoto(s.Photos[0].PhotoReference),
-		// }
-		server.RequestPhoto(s.Photos[0].PhotoReference)
-		pretty.Println(s)
-		// handcupInfoCreated, err := handcupInfo.SaveHandcupInfo(server.DB)
+	for _, s := range parms.results {
+		handcupInfo := models.HandcupInfo{
+			GoogleId:       s.ID,
+			PlaceId:        s.PlaceID,
+			Name:           s.Name,
+			Latitude:       s.Geometry.Location.Lat,
+			Longitude:      s.Geometry.Location.Lng,
+			Rating:         s.Rating,
+			ImageReference: s.Photos[0].PhotoReference,
+			ImageWidth:     s.Photos[0].Width,
+			ImageHeight:    s.Photos[0].Height,
+			ImageUrl:       server.requestPhoto(s.Photos[0].PhotoReference),
+		}
+		server.requestPhoto(s.Photos[0].PhotoReference)
+		pretty.Println(handcupInfo)
+
+		handcupInfoCreated, err := handcupInfo.SaveHandcupInfo(server.DB)
+		if err != nil {
+			formattedError := formaterror.FormatError(err.Error())
+			responses.ERROR(parms.w, http.StatusInternalServerError, formattedError)
+			return
+		}
+
+		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%d", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.ID))
+		responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)
 	}
 }
 
-func (server *Server) RequestPhoto(ref string) {
-	key, err := server.LoadGoogleKey()
+func (server *Server) requestPhoto(ref string) string {
+	key, err := server.loadGoogleKey()
 	if err != nil {
 		log.Fatalf("Load API key fatal error: %s", err)
 	}
 
-	c, err := maps.NewClient(maps.WithAPIKey(key))
+	maxWidth := 400
+	requsetBaseURL := "https://maps.googleapis.com/maps/api/place/photo?"
+	requestURL := fmt.Sprintf("%smaxwidth=%d&photoreference=%s&key=%s", requsetBaseURL, maxWidth, ref, key)
+	resp, err := http.Get(requestURL)
 	if err != nil {
-		log.Fatalf("Connect client fatal error: %s", err)
+		log.Fatalf("http.Get => %v", err.Error())
 	}
 
-	r := &maps.PlacePhotoRequest{
-		PhotoReference: ref,
-		MaxWidth:       400,
-	}
+	// Your magic function. The Request in the Response is the last URL the
+	// client tried to access.
+	finalURL := resp.Request.URL.String()
+	fmt.Printf("The photo url you ended up at is: %v\n", finalURL)
 
-	resp, err := c.PlacePhoto(context.Background(), r)
-
-	if err != nil {
-		log.Fatalf("Request photo fatal error: %s", err)
-	}
-
-	pretty.Println(resp.ContentType)
-	resp.Data.Close()
+	return finalURL
 }
 
-func (server *Server) LoadGoogleKey() (string, error) {
+func (server *Server) loadGoogleKey() (string, error) {
 	var err error
 	err = godotenv.Load()
 	if err != nil {
