@@ -2,8 +2,6 @@ package models
 
 import (
 	"errors"
-	"html"
-	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -25,28 +23,34 @@ type HandcupInfo struct {
 	UpdateTime     time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
-func (h *HandcupInfo) Prepare() {
-	h.ID = 0
-	h.GoogleId = html.EscapeString(strings.TrimSpace(h.GoogleId))
-	h.PlaceId = html.EscapeString(strings.TrimSpace(h.GoogleId))
-	h.Name = html.EscapeString(strings.TrimSpace(h.Name))
-	h.Latitude = 0
-	h.Longitude = 0
-	h.Rating = 0
-	h.ImageReference = html.EscapeString(strings.TrimSpace(h.ImageReference))
-	h.ImageWidth = 0
-	h.ImageHeight = 0
-	h.ImageUrl = html.EscapeString(strings.TrimSpace(h.ImageUrl))
-	h.CreateTime = time.Now()
-	h.UpdateTime = time.Now()
-}
+// func (h *HandcupInfo) Prepare() {
+// 	h.ID = 0
+// 	h.GoogleId = html.EscapeString(strings.TrimSpace(h.GoogleId))
+// 	h.PlaceId = html.EscapeString(strings.TrimSpace(h.GoogleId))
+// 	h.Name = html.EscapeString(strings.TrimSpace(h.Name))
+// 	h.Latitude = 0
+// 	h.Longitude = 0
+// 	h.Rating = 0
+// 	h.ImageReference = html.EscapeString(strings.TrimSpace(h.ImageReference))
+// 	h.ImageWidth = 0
+// 	h.ImageHeight = 0
+// 	h.ImageUrl = html.EscapeString(strings.TrimSpace(h.ImageUrl))
+// 	h.CreateTime = time.Now()
+// 	h.UpdateTime = time.Now()
+// }
 
 func (h *HandcupInfo) SaveHandcupInfo(db *gorm.DB) (*HandcupInfo, error) {
 	var err error
-	err = db.Debug().Create(&h).Error
+	err = db.Debug().Select(&h).Where("place_id = ?", h.PlaceId).Error
+
+	// If this place_id not exist
 	if err != nil {
-		return &HandcupInfo{}, err
+		err = db.Debug().Create(&h).Error
+		if err != nil {
+			return &HandcupInfo{}, err
+		}
 	}
+	// fmt.Print(h)
 	return h, nil
 }
 

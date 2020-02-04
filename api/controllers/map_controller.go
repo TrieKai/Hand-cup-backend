@@ -30,7 +30,7 @@ type saveResultsParms struct {
 
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	HistoryRequest := models.HistoryRequest{}
-	fmt.Print(r)
+	// fmt.Print(r)
 	groupResults, err := HistoryRequest.FindAllHistoryRequests(server.DB)
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
@@ -53,7 +53,7 @@ func (server *Server) handleMap(parms handleMapParms) {
 
 	r := &maps.NearbySearchRequest{
 		Location: &maps.LatLng{Lat: 24.988669, Lng: 121.448312},
-		Radius:   5,
+		Radius:   1,
 		Keyword:  "飲料店",
 	}
 	if len(parms.nextToken) != 0 {
@@ -72,7 +72,6 @@ func (server *Server) handleMap(parms handleMapParms) {
 }
 
 func (server *Server) saveResults(parms saveResultsParms) {
-
 	for _, s := range parms.results {
 		handcupInfo := models.HandcupInfo{
 			GoogleId:       s.ID,
@@ -96,7 +95,12 @@ func (server *Server) saveResults(parms saveResultsParms) {
 			return
 		}
 
-		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%d", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.ID))
+		// 不知道為啥
+		if parms.r == nil {
+			continue
+		}
+		fmt.Print(handcupInfoCreated)
+		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%d", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
 		responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)
 	}
 }
@@ -115,8 +119,7 @@ func (server *Server) requestPhoto(ref string) string {
 		log.Fatalf("http.Get => %v", err.Error())
 	}
 
-	// Your magic function. The Request in the Response is the last URL the
-	// client tried to access.
+	// The Request in the Response is the last URL the
 	finalURL := resp.Request.URL.String()
 	fmt.Printf("The photo url you ended up at is: %v\n", finalURL)
 
