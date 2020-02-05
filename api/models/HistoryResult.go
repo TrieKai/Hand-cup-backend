@@ -1,8 +1,7 @@
 package models
 
 import (
-	"html"
-	"strings"
+	"log"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -11,26 +10,37 @@ import (
 type HistoryRequest struct {
 	ID           uint32      `gorm:"primary_key;auto_increment" json:"id"`
 	GroupId      uint32      `grom:"not null;" json:"group_id"`
-	HandcupId    string      `gorm:"size:45;not null;unique" json:"handcup_id"`
+	HandcupId    uint32      `gorm:"not null;" json:"handcup_id"`
 	HandcupInfo  HandcupInfo `json:"handcupInfo"`
 	ReqLatitude  float64     `grom:"not null;" json:"req_latitude"`
-	ReqLongitute float64     `grom:"not null;" json:"req_longitude"`
-	Distance     uint32      `gorm:"not null;" json:"distance"`
+	ReqLongitude float64     `grom:"not null;" json:"req_longitude"`
+	Distance     uint        `gorm:"not null;" json:"distance"`
 	CreateTime   time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"create_time"`
 	UpdateTime   time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
-func (h *HistoryRequest) Prepare() {
-	h.ID = 0
-	h.HandcupId = html.EscapeString(strings.TrimSpace(h.HandcupId))
+func (h *HistoryRequest) initData(db *gorm.DB, latestGroupID uint32, latestID uint32) {
+	h.GroupId = latestGroupID
+	h.HandcupId = latestID + 1
 	h.HandcupInfo = HandcupInfo{}
-	h.Distance = 100
 	h.CreateTime = time.Now()
 	h.UpdateTime = time.Now()
 }
 
-func (h *HistoryRequest) SaveHistoryRequest(db *gorm.DB) (*HistoryRequest, error) {
+func (h *HistoryRequest) FindLatestGroupID(db *gorm.DB) uint32 {
+	var max uint32
+	row := db.Table("history_requests").Select("MAX(group_id)").Row()
+	row.Scan(&max)
+	log.Println(max)
+
+	return max
+}
+
+func (h *HistoryRequest) SaveHistoryRequest(db *gorm.DB, latestGroupID uint32, latestID uint32) (*HistoryRequest, error) {
 	var err error
+
+	h.initData(db, latestGroupID, latestID)
+
 	err = db.Debug().Model(&HistoryRequest{}).Create(&h).Error
 	if err != nil {
 		return &HistoryRequest{}, err

@@ -12,7 +12,6 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/kr/pretty"
 	"googlemaps.github.io/maps"
 )
 
@@ -23,9 +22,11 @@ type handleMapParms struct {
 }
 
 type saveResultsParms struct {
-	results []maps.PlacesSearchResult
-	w       http.ResponseWriter
-	r       *http.Request
+	results  []maps.PlacesSearchResult
+	w        http.ResponseWriter
+	r        *http.Request
+	location maps.LatLng
+	distance uint
 }
 
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
@@ -52,8 +53,8 @@ func (server *Server) handleMap(parms handleMapParms) {
 	}
 
 	r := &maps.NearbySearchRequest{
-		Location: &maps.LatLng{Lat: 24.988669, Lng: 121.448312},
-		Radius:   1,
+		Location: &maps.LatLng{Lat: 24.992706, Lng: 121.449115},
+		Radius:   10,
 		Keyword:  "飲料店",
 	}
 	if len(parms.nextToken) != 0 {
@@ -68,7 +69,7 @@ func (server *Server) handleMap(parms handleMapParms) {
 		server.handleMap(handleMapParms{nextToken: resp.NextPageToken})
 	}
 
-	server.saveResults(saveResultsParms{results: resp.Results, w: parms.w, r: parms.r})
+	server.saveResults(saveResultsParms{results: resp.Results, w: parms.w, r: parms.r, location: *r.Location, distance: r.Radius})
 }
 
 func (server *Server) saveResults(parms saveResultsParms) {
@@ -86,7 +87,7 @@ func (server *Server) saveResults(parms saveResultsParms) {
 			ImageUrl:       server.requestPhoto(s.Photos[0].PhotoReference),
 		}
 		server.requestPhoto(s.Photos[0].PhotoReference)
-		pretty.Println(handcupInfo)
+		// pretty.Println(handcupInfo)
 
 		handcupInfoCreated, err := handcupInfo.SaveHandcupInfo(server.DB)
 		if err != nil {
@@ -95,12 +96,23 @@ func (server *Server) saveResults(parms saveResultsParms) {
 			return
 		}
 
+		HistoryRequest := models.HistoryRequest{
+			ReqLatitude:  parms.location.Lat,
+			ReqLongitude: parms.location.Lng,
+			Distance:     parms.distance,
+		}
+
+		latestGroupID := HistoryRequest.FindLatestGroupID(server.DB)
+		latestID := handcupInfo.FindLatestID(server.DB)
+
+		HistoryRequest.SaveHistoryRequest(server.DB, latestGroupID, latestID)
+
 		// 不知道為啥
 		if parms.r == nil {
 			continue
 		}
-		fmt.Print(handcupInfoCreated)
-		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%d", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
+
+		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%d\n", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
 		responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)
 	}
 }
