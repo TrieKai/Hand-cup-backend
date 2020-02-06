@@ -2,7 +2,6 @@ package models
 
 import (
 	"errors"
-	"log"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -42,9 +41,8 @@ type HandcupInfo struct {
 
 func (h *HandcupInfo) FindLatestID(db *gorm.DB) uint32 {
 	var latestID uint32
-	row := db.Table("handcup_infos").Select("MAX(id)").Row()
+	row := db.Debug().Table("handcup_infos").Select("MAX(id)").Row()
 	row.Scan(&latestID)
-	log.Println("latestID:", latestID)
 
 	return latestID
 }

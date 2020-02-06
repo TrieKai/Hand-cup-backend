@@ -53,7 +53,7 @@ func (server *Server) handleMap(parms handleMapParms) {
 	}
 
 	r := &maps.NearbySearchRequest{
-		Location: &maps.LatLng{Lat: 24.992706, Lng: 121.449115},
+		Location: &maps.LatLng{Lat: 24.992706, Lng: 121.449115}, //24.992706 121.449115
 		Radius:   10,
 		Keyword:  "飲料店",
 	}
@@ -65,14 +65,23 @@ func (server *Server) handleMap(parms handleMapParms) {
 		log.Fatalf("Request nearby search fatal error: %s", err)
 	}
 
+	// Recall next page with nextToken
 	if resp.NextPageToken != "" {
 		server.handleMap(handleMapParms{nextToken: resp.NextPageToken})
 	}
 
-	server.saveResults(saveResultsParms{results: resp.Results, w: parms.w, r: parms.r, location: *r.Location, distance: r.Radius})
+	// If google response has data
+	if len(resp.Results) != 0 {
+		server.saveResults(saveResultsParms{results: resp.Results, w: parms.w, r: parms.r, location: *r.Location, distance: r.Radius})
+	} else {
+		return
+	}
 }
 
 func (server *Server) saveResults(parms saveResultsParms) {
+	HistoryRequest := models.HistoryRequest{}
+	latestGroupID := HistoryRequest.FindLatestGroupID(server.DB)
+
 	for _, s := range parms.results {
 		handcupInfo := models.HandcupInfo{
 			GoogleId:       s.ID,
@@ -96,16 +105,16 @@ func (server *Server) saveResults(parms saveResultsParms) {
 			return
 		}
 
-		HistoryRequest := models.HistoryRequest{
-			ReqLatitude:  parms.location.Lat,
-			ReqLongitude: parms.location.Lng,
-			Distance:     parms.distance,
-		}
+		HistoryRequest.ReqLatitude = parms.location.Lat
+		HistoryRequest.ReqLongitude = parms.location.Lng
+		HistoryRequest.Distance = parms.distance
 
-		latestGroupID := HistoryRequest.FindLatestGroupID(server.DB)
 		latestID := handcupInfo.FindLatestID(server.DB)
 
-		HistoryRequest.SaveHistoryRequest(server.DB, latestGroupID, latestID)
+		fmt.Print(latestGroupID, latestID)
+		HistoryRequest.InitData(latestGroupID, latestID)
+
+		HistoryRequest.SaveHistoryRequest(server.DB)
 
 		// 不知道為啥
 		if parms.r == nil {

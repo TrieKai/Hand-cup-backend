@@ -19,9 +19,9 @@ type HistoryRequest struct {
 	UpdateTime   time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
-func (h *HistoryRequest) initData(db *gorm.DB, latestGroupID uint32, latestID uint32) {
-	h.GroupId = latestGroupID
-	h.HandcupId = latestID + 1
+func (h *HistoryRequest) InitData(latestGroupID uint32, latestID uint32) {
+	h.GroupId = latestGroupID + 1
+	h.HandcupId = latestID
 	h.HandcupInfo = HandcupInfo{}
 	h.CreateTime = time.Now()
 	h.UpdateTime = time.Now()
@@ -36,10 +36,10 @@ func (h *HistoryRequest) FindLatestGroupID(db *gorm.DB) uint32 {
 	return max
 }
 
-func (h *HistoryRequest) SaveHistoryRequest(db *gorm.DB, latestGroupID uint32, latestID uint32) (*HistoryRequest, error) {
+func (h *HistoryRequest) SaveHistoryRequest(db *gorm.DB) (*HistoryRequest, error) {
 	var err error
 
-	h.initData(db, latestGroupID, latestID)
+	// h.initData(db, latestGroupID, latestID)
 
 	err = db.Debug().Model(&HistoryRequest{}).Create(&h).Error
 	if err != nil {
