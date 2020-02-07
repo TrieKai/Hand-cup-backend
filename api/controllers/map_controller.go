@@ -53,7 +53,7 @@ func (server *Server) handleMap(parms handleMapParms) {
 	}
 
 	r := &maps.NearbySearchRequest{
-		Location: &maps.LatLng{Lat: 24.992706, Lng: 121.449115}, //24.992706 121.449115
+		Location: &maps.LatLng{Lat: 24.988897, Lng: 121.448138}, //24.992706, 121.449115 24.988897, 121.448138
 		Radius:   10,
 		Keyword:  "飲料店",
 	}
@@ -116,12 +116,7 @@ func (server *Server) saveResults(parms saveResultsParms) {
 
 		HistoryRequest.SaveHistoryRequest(server.DB)
 
-		// 不知道為啥
-		if parms.r == nil {
-			continue
-		}
-
-		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%d\n", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
+		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
 		responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)
 	}
 }

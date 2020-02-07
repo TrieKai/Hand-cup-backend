@@ -8,7 +8,7 @@ import (
 )
 
 type HistoryRequest struct {
-	ID           uint32      `gorm:"primary_key;auto_increment" json:"id"`
+	ID           uint32      `gorm:"type: serial auto_increment;not null;primary_key" json:"id"`
 	GroupId      uint32      `grom:"not null;" json:"group_id"`
 	HandcupId    uint32      `gorm:"not null;" json:"handcup_id"`
 	HandcupInfo  HandcupInfo `json:"handcupInfo"`
@@ -41,11 +41,11 @@ func (h *HistoryRequest) SaveHistoryRequest(db *gorm.DB) (*HistoryRequest, error
 
 	// h.initData(db, latestGroupID, latestID)
 
-	err = db.Debug().Model(&HistoryRequest{}).Create(&h).Error
+	err = db.Debug().Create(&h).Error
 	if err != nil {
 		return &HistoryRequest{}, err
 	}
-	if h.ID != 0 {
+	if h.GroupId != 0 {
 		err = db.Debug().Model(&HandcupInfo{}).Where("id = ?", h.HandcupId).Take(&h.HandcupInfo).Error
 		if err != nil {
 			return &HistoryRequest{}, err
