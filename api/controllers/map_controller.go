@@ -53,7 +53,7 @@ func (server *Server) handleMap(parms handleMapParms) {
 	}
 
 	r := &maps.NearbySearchRequest{
-		Location: &maps.LatLng{Lat: 24.988897, Lng: 121.448138}, //24.992706, 121.449115 24.988897, 121.448138
+		Location: &maps.LatLng{Lat: 24.9888971, Lng: 121.4481381}, //24.9927061, 121.4491151 24.9888971, 121.4481381
 		Radius:   10,
 		Keyword:  "飲料店",
 	}
@@ -111,10 +111,11 @@ func (server *Server) saveResults(parms saveResultsParms) {
 
 		latestID := handcupInfo.FindLatestID(server.DB)
 
-		fmt.Print(latestGroupID, latestID)
-		HistoryRequest.InitData(latestGroupID, latestID)
+		latestHisReqID := HistoryRequest.FindLatestHisReqID(server.DB)
+		fmt.Print(latestHisReqID, latestGroupID, latestID)
+		HistoryRequest.InitData(latestHisReqID, latestGroupID, latestID)
 
-		HistoryRequest.SaveHistoryRequest(server.DB)
+		HistoryRequest.HandleHistoryReq(server.DB)
 
 		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
 		responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)

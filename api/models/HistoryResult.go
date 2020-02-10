@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -8,7 +9,7 @@ import (
 )
 
 type HistoryRequest struct {
-	ID           uint32      `gorm:"type: serial auto_increment;not null;primary_key" json:"id"`
+	ID           uint32      `gorm:"type:bigint(20) unsigned auto_increment;not null;primary_key" json:"id"`
 	GroupId      uint32      `grom:"not null;" json:"group_id"`
 	HandcupId    uint32      `gorm:"not null;" json:"handcup_id"`
 	HandcupInfo  HandcupInfo `json:"handcupInfo"`
@@ -19,12 +20,22 @@ type HistoryRequest struct {
 	UpdateTime   time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
-func (h *HistoryRequest) InitData(latestGroupID uint32, latestID uint32) {
+func (h *HistoryRequest) InitData(latestHisReqID uint32, latestGroupID uint32, latestID uint32) {
+	h.ID = latestHisReqID + 1
 	h.GroupId = latestGroupID + 1
 	h.HandcupId = latestID
 	h.HandcupInfo = HandcupInfo{}
 	h.CreateTime = time.Now()
 	h.UpdateTime = time.Now()
+}
+
+func (h *HistoryRequest) FindLatestHisReqID(db *gorm.DB) uint32 {
+	var max uint32
+	row := db.Table("history_requests").Select("MAX(id)").Row()
+	row.Scan(&max)
+	log.Println(max)
+
+	return max
 }
 
 func (h *HistoryRequest) FindLatestGroupID(db *gorm.DB) uint32 {
@@ -36,11 +47,27 @@ func (h *HistoryRequest) FindLatestGroupID(db *gorm.DB) uint32 {
 	return max
 }
 
-func (h *HistoryRequest) SaveHistoryRequest(db *gorm.DB) (*HistoryRequest, error) {
+func (h *HistoryRequest) HandleHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
 	var err error
+	maxLat := h.ReqLatitude + 0.0009
+	minLat := h.ReqLatitude - 0.0009
+	maxLng := h.ReqLongitude + 0.0009
+	minLng := h.ReqLongitude - 0.0009
 
-	// h.initData(db, latestGroupID, latestID)
+	rows, err := db.
+		Table("history_requests").
+		Select("group_id, req_latitude, req_longitude").
+		Where("(req_latitude BETWEEN ? AND ?) AND (req_longitude BETWEEN ? AND ?)", minLat, maxLat, minLng, maxLng).
+		Group("group_id").
+		Rows()
+	fmt.Println("已存在的經緯度", rows, err)
+	saveHistoryReq, err := h.saveHistoryReq(db)
+	return saveHistoryReq, err
+}
 
+func (h *HistoryRequest) saveHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
+	var err error
+	fmt.Println(&h)
 	err = db.Debug().Create(&h).Error
 	if err != nil {
 		return &HistoryRequest{}, err

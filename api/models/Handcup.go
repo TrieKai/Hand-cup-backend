@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -50,9 +51,9 @@ func (h *HandcupInfo) FindLatestID(db *gorm.DB) uint32 {
 func (h *HandcupInfo) SaveHandcupInfo(db *gorm.DB) (*HandcupInfo, error) {
 	var err error
 	isExist := db.Raw("SELECT place_id FROM handcup_infos WHERE place_id = ?", h.PlaceId).Scan(&h)
-
+	fmt.Println("place_id是否存在", isExist.RowsAffected)
 	// If this place_id not exist
-	if isExist.Value == nil {
+	if isExist.RowsAffected == 0 {
 		err = db.Debug().Create(&h).Error
 		if err != nil {
 			return &HandcupInfo{}, err
