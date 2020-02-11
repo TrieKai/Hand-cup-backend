@@ -83,45 +83,51 @@ func (server *Server) saveResults(parms saveResultsParms) {
 	HistoryRequest.ReqLatitude = parms.location.Lat
 	HistoryRequest.ReqLongitude = parms.location.Lng
 	latestGroupID := HistoryRequest.FindLatestGroupID(server.DB)
-	gg, err := HistoryRequest.HandleHistoryReq(server.DB)
+
+	hisReq, err := HistoryRequest.CheckHistoryReq(server.DB)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Print("檢查回傳值", gg)
 
-	for _, s := range parms.results {
-		handcupInfo := models.HandcupInfo{
-			GoogleId:       s.ID,
-			PlaceId:        s.PlaceID,
-			Name:           s.Name,
-			Latitude:       s.Geometry.Location.Lat,
-			Longitude:      s.Geometry.Location.Lng,
-			Rating:         s.Rating,
-			ImageReference: s.Photos[0].PhotoReference,
-			ImageWidth:     s.Photos[0].Width,
-			ImageHeight:    s.Photos[0].Height,
-			ImageUrl:       server.requestPhoto(s.Photos[0].PhotoReference),
+	fmt.Print("檢查回傳值", hisReq)
+	// 如果 HistoryRequest 內沒有紀錄
+	if hisReq == nil {
+		for _, s := range parms.results {
+			handcupInfo := models.HandcupInfo{
+				GoogleId:       s.ID,
+				PlaceId:        s.PlaceID,
+				Name:           s.Name,
+				Latitude:       s.Geometry.Location.Lat,
+				Longitude:      s.Geometry.Location.Lng,
+				Rating:         s.Rating,
+				ImageReference: s.Photos[0].PhotoReference,
+				ImageWidth:     s.Photos[0].Width,
+				ImageHeight:    s.Photos[0].Height,
+				ImageUrl:       server.requestPhoto(s.Photos[0].PhotoReference),
+			}
+			server.requestPhoto(s.Photos[0].PhotoReference)
+			// pretty.Println(handcupInfo)
+
+			handcupInfoCreated, err := handcupInfo.SaveHandcupInfo(server.DB)
+			if err != nil {
+				formattedError := formaterror.FormatError(err.Error())
+				responses.ERROR(parms.w, http.StatusInternalServerError, formattedError)
+				return
+			}
+
+			latestID := handcupInfo.FindLatestID(server.DB)
+
+			latestHisReqID := HistoryRequest.FindLatestHisReqID(server.DB)
+			fmt.Print(latestHisReqID, latestGroupID, latestID)
+			HistoryRequest.InitData(latestHisReqID, latestGroupID, latestID)
+
+			HistoryRequest.SaveHistoryReq(server.DB)
+
+			parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
+			responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)
 		}
-		server.requestPhoto(s.Photos[0].PhotoReference)
-		// pretty.Println(handcupInfo)
-
-		handcupInfoCreated, err := handcupInfo.SaveHandcupInfo(server.DB)
-		if err != nil {
-			formattedError := formaterror.FormatError(err.Error())
-			responses.ERROR(parms.w, http.StatusInternalServerError, formattedError)
-			return
-		}
-
-		latestID := handcupInfo.FindLatestID(server.DB)
-
-		latestHisReqID := HistoryRequest.FindLatestHisReqID(server.DB)
-		fmt.Print(latestHisReqID, latestGroupID, latestID)
-		HistoryRequest.InitData(latestHisReqID, latestGroupID, latestID)
-
-		HistoryRequest.HandleHistoryReq(server.DB)
-
-		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
-		responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)
+	} else {
+		// TODO: Handle has history request
 	}
 }
 

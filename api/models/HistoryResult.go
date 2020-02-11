@@ -47,7 +47,7 @@ func (h *HistoryRequest) FindLatestGroupID(db *gorm.DB) uint32 {
 	return max
 }
 
-func (h *HistoryRequest) HandleHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
+func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
 	var err error
 	maxLat := h.ReqLatitude + 0.0009
 	minLat := h.ReqLatitude - 0.0009
@@ -61,10 +61,14 @@ func (h *HistoryRequest) HandleHistoryReq(db *gorm.DB) (*HistoryRequest, error) 
 		Group("group_id").
 		Rows()
 	defer rows.Close()
+	fmt.Println("下一個:", rows.Next())
 
-	for rows.Next() {
+	// 如果在 History requests 內有資料
+	if rows.Next() {
 		rows.Scan(&h)
-		fmt.Println("已搜尋的資料", h)
+		fmt.Println("已搜尋到的資料", h)
+	} else {
+		return nil, err
 	}
 
 	return h, err

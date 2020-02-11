@@ -19,7 +19,7 @@ type HandcupInfo struct {
 	ImageReference string    `json:"image_reference"`
 	ImageWidth     int       `json:"image_width"`
 	ImageHeight    int       `json:"image_height"`
-	ImageUrl       string    `gorm:"size:100;" json:"image_url"`
+	ImageUrl       string    `gorm:"size:150;" json:"image_url"`
 	CreateTime     time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"create_time"`
 	UpdateTime     time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
