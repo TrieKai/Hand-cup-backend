@@ -80,7 +80,14 @@ func (server *Server) handleMap(parms handleMapParms) {
 
 func (server *Server) saveResults(parms saveResultsParms) {
 	HistoryRequest := models.HistoryRequest{}
+	HistoryRequest.ReqLatitude = parms.location.Lat
+	HistoryRequest.ReqLongitude = parms.location.Lng
 	latestGroupID := HistoryRequest.FindLatestGroupID(server.DB)
+	gg, err := HistoryRequest.HandleHistoryReq(server.DB)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Print("檢查回傳值", gg)
 
 	for _, s := range parms.results {
 		handcupInfo := models.HandcupInfo{
@@ -104,10 +111,6 @@ func (server *Server) saveResults(parms saveResultsParms) {
 			responses.ERROR(parms.w, http.StatusInternalServerError, formattedError)
 			return
 		}
-
-		HistoryRequest.ReqLatitude = parms.location.Lat
-		HistoryRequest.ReqLongitude = parms.location.Lng
-		HistoryRequest.Distance = parms.distance
 
 		latestID := handcupInfo.FindLatestID(server.DB)
 

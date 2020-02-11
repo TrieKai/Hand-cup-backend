@@ -60,12 +60,17 @@ func (h *HistoryRequest) HandleHistoryReq(db *gorm.DB) (*HistoryRequest, error) 
 		Where("(req_latitude BETWEEN ? AND ?) AND (req_longitude BETWEEN ? AND ?)", minLat, maxLat, minLng, maxLng).
 		Group("group_id").
 		Rows()
-	fmt.Println("已存在的經緯度", rows, err)
-	saveHistoryReq, err := h.saveHistoryReq(db)
-	return saveHistoryReq, err
+	defer rows.Close()
+
+	for rows.Next() {
+		rows.Scan(&h)
+		fmt.Println("已搜尋的資料", h)
+	}
+
+	return h, err
 }
 
-func (h *HistoryRequest) saveHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
+func (h *HistoryRequest) SaveHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
 	var err error
 	fmt.Println(&h)
 	err = db.Debug().Create(&h).Error
