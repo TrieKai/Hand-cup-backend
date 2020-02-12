@@ -20,6 +20,12 @@ type HistoryRequest struct {
 	UpdateTime   time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
+type HRTest struct {
+	GroupId      uint32  `grom:"not null;" json:"group_id"`
+	ReqLatitude  float64 `grom:"not null;" json:"req_latitude"`
+	ReqLongitude float64 `grom:"not null;" json:"req_longitude"`
+}
+
 func (h *HistoryRequest) InitData(latestHisReqID uint32, latestGroupID uint32, latestID uint32) {
 	h.ID = latestHisReqID + 1
 	h.GroupId = latestGroupID + 1
@@ -61,12 +67,24 @@ func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
 		Group("group_id").
 		Rows()
 	defer rows.Close()
-	fmt.Println("下一個:", rows.Next())
+	isExist := rows.Next()
+	fmt.Println("下一個:", isExist)
 
 	// 如果在 History requests 內有資料
-	if rows.Next() {
-		rows.Scan(&h)
+	if isExist {
+		rows.Scan(&h.GroupId, &h.HandcupId)
 		fmt.Println("已搜尋到的資料", h)
+
+		var bkn []HRTest
+		test := db.
+			Table("history_requests").
+			Select("group_id, req_latitude, req_longitude").
+			Where("(req_latitude BETWEEN ? AND ?) AND (req_longitude BETWEEN ? AND ?)", minLat, maxLat, minLng, maxLng).
+			Group("group_id").
+			Find(&bkn)
+
+		fmt.Println("測試一下:", test)
+		fmt.Println("哈哈是我啦:", bkn)
 	} else {
 		return nil, err
 	}

@@ -128,6 +128,7 @@ func (server *Server) saveResults(parms saveResultsParms) {
 		}
 	} else {
 		// TODO: Handle has history request
+		fmt.Println("群組ID:", hisReq.GroupId)
 	}
 }
 
