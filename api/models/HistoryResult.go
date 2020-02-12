@@ -20,10 +20,16 @@ type HistoryRequest struct {
 	UpdateTime   time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
-type HRTest struct {
-	GroupId      uint32  `grom:"not null;" json:"group_id"`
-	ReqLatitude  float64 `grom:"not null;" json:"req_latitude"`
-	ReqLongitude float64 `grom:"not null;" json:"req_longitude"`
+type CheckHRResponse struct {
+	GroupId      uint32    `grom:"not null;" json:"group_id"`
+	ReqLatitude  float64   `grom:"not null;" json:"req_latitude"`
+	ReqLongitude float64   `grom:"not null;" json:"req_longitude"`
+	UpdateTime   time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
+}
+
+type HandcupIdResponse struct {
+	GroupId   uint32 `grom:"not null;" json:"group_id"`
+	HandcupId uint32 `gorm:"not null;" json:"handcup_id"`
 }
 
 func (h *HistoryRequest) InitData(latestHisReqID uint32, latestGroupID uint32, latestID uint32) {
@@ -60,36 +66,43 @@ func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
 	maxLng := h.ReqLongitude + 0.0009
 	minLng := h.ReqLongitude - 0.0009
 
-	rows, err := db.
+	// rows, err := db.
+	// 	Table("history_requests").
+	// 	Select("group_id, req_latitude, req_longitude, update_time").
+	// 	Where("(req_latitude BETWEEN ? AND ?) AND (req_longitude BETWEEN ? AND ?)", minLat, maxLat, minLng, maxLng).
+	// 	Group("group_id").
+	// 	Rows()
+	// defer rows.Close()
+	// isExist := rows.Next()
+	// fmt.Println("下一個:", isExist)
+
+	var respData []CheckHRResponse
+	db.
 		Table("history_requests").
-		Select("group_id, req_latitude, req_longitude").
+		Select("group_id, req_latitude, req_longitude, update_time").
 		Where("(req_latitude BETWEEN ? AND ?) AND (req_longitude BETWEEN ? AND ?)", minLat, maxLat, minLng, maxLng).
 		Group("group_id").
-		Rows()
-	defer rows.Close()
-	isExist := rows.Next()
-	fmt.Println("下一個:", isExist)
+		Find(&respData)
+	// fmt.Println("測試一下:", resp)
+	fmt.Println("哈哈是我啦:", respData)
 
 	// 如果在 History requests 內有資料
-	if isExist {
-		rows.Scan(&h.GroupId, &h.HandcupId)
-		fmt.Println("已搜尋到的資料", h)
-
-		var bkn []HRTest
-		test := db.
-			Table("history_requests").
-			Select("group_id, req_latitude, req_longitude").
-			Where("(req_latitude BETWEEN ? AND ?) AND (req_longitude BETWEEN ? AND ?)", minLat, maxLat, minLng, maxLng).
-			Group("group_id").
-			Find(&bkn)
-
-		fmt.Println("測試一下:", test)
-		fmt.Println("哈哈是我啦:", bkn)
+	if len(respData) != 0 {
+		fmt.Println("已搜尋到的資料", respData)
+		h.findHandcupId(db, respData[0].GroupId) // 以 GroupId 去找所有的 HandcupId
 	} else {
 		return nil, err
 	}
 
 	return h, err
+}
+
+func (h *HistoryRequest) findHandcupId(db *gorm.DB, groupId uint32) []HandcupIdResponse {
+	var HandcupIdResponse []HandcupIdResponse
+	db.Table("history_requests").Select("group_id, handcup_id").Where("group_id = ?", groupId).Find(&HandcupIdResponse)
+	fmt.Println("抓到你摟:", HandcupIdResponse)
+
+	return HandcupIdResponse
 }
 
 func (h *HistoryRequest) SaveHistoryReq(db *gorm.DB) (*HistoryRequest, error) {

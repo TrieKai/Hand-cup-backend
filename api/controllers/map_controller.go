@@ -53,7 +53,7 @@ func (server *Server) handleMap(parms handleMapParms) {
 	}
 
 	r := &maps.NearbySearchRequest{
-		Location: &maps.LatLng{Lat: 24.9888971, Lng: 121.4481381}, //24.9927061, 121.4491151 24.9888971, 121.4481381
+		Location: &maps.LatLng{Lat: 24.9927061, Lng: 121.4491151}, //24.9927061, 121.4491151 24.9888971, 121.4481381
 		Radius:   10,
 		Keyword:  "飲料店",
 	}
