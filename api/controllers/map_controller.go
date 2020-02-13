@@ -30,14 +30,14 @@ type saveResultsParms struct {
 }
 
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
-	HistoryRequest := models.HistoryRequest{}
+	// HistoryRequest := models.HistoryRequest{}
 	// fmt.Print(r)
-	groupResults, err := HistoryRequest.FindAllHistoryRequests(server.DB)
-	if err != nil {
-		responses.ERROR(w, http.StatusInternalServerError, err)
-		return
-	}
-	responses.JSON(w, http.StatusOK, groupResults)
+	// groupResults, err := HistoryRequest.FindAllHistoryRequests(server.DB)
+	// if err != nil {
+	// 	responses.ERROR(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
+	// responses.JSON(w, http.StatusOK, groupResults)
 	server.handleMap(handleMapParms{w: w, r: r})
 }
 
@@ -94,6 +94,7 @@ func (server *Server) saveResults(parms saveResultsParms) {
 	// 如果 HistoryRequest 內沒有紀錄
 	if len(hisReqResp) == 0 {
 		for _, s := range parms.results {
+			handcupInfo.ID = handcupInfo.FindLatestID(server.DB) + 1
 			handcupInfo.GoogleId = s.ID
 			handcupInfo.PlaceId = s.PlaceID
 			handcupInfo.Name = s.Name
@@ -123,7 +124,8 @@ func (server *Server) saveResults(parms saveResultsParms) {
 			HistoryRequest.SaveHistoryReq(server.DB)
 
 			parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
-			responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)
+			responses.JSON(parms.w, http.StatusOK, handcupInfoCreated)
+			// responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)
 		}
 	} else {
 		// TODO: Handle has history request
@@ -136,6 +138,7 @@ func (server *Server) saveResults(parms saveResultsParms) {
 				fmt.Println("為甚麼會錯:", err)
 			}
 			fmt.Println("飲料店資料抓到你啦:", resp)
+			responses.JSON(parms.w, http.StatusOK, resp)
 		}
 	}
 }

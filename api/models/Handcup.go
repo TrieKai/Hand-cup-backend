@@ -57,17 +57,18 @@ func (h *HandcupInfo) FindAllHandcupInfo(db *gorm.DB) (*[]HandcupInfo, error) {
 	return &HandcupInfoList, err
 }
 
-func (h *HandcupInfo) FindHandcupInfoByID(db *gorm.DB, hid uint32) (*HandcupInfo, error) {
+func (h *HandcupInfo) FindHandcupInfoByID(db *gorm.DB, hid uint32) (HandcupInfo, error) {
 	var err error
-	// TODO: Fix SQL bug
-	err = db.Debug().Table("handcup_infos").Where("id = ?", hid).Find(&h).Error
+	handcupInfo := HandcupInfo{}
+	err = db.Debug().Table("handcup_infos").Where("id = ?", hid).Find(&handcupInfo).Error
 	if err != nil {
-		return &HandcupInfo{}, err
+		return handcupInfo, err
 	}
 	if gorm.IsRecordNotFoundError(err) {
-		return &HandcupInfo{}, errors.New("HandcupInfo Not Found")
+		return handcupInfo, errors.New("HandcupInfo Not Found")
 	}
-	return h, err
+
+	return handcupInfo, err
 }
 
 func (h *HandcupInfo) UpdateAHandcupInfo(db *gorm.DB, hid uint32) (*HandcupInfo, error) {
