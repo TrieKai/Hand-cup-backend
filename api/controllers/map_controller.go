@@ -53,7 +53,7 @@ func (server *Server) handleMap(parms handleMapParms) {
 	}
 
 	r := &maps.NearbySearchRequest{
-		Location: &maps.LatLng{Lat: 24.9927061, Lng: 121.4491151}, //24.9927061, 121.4491151 24.9888971, 121.4481381
+		Location: &maps.LatLng{Lat: 24.9888971, Lng: 121.4481381}, //24.9927061, 121.4491151 24.9888971, 121.4481381
 		Radius:   10,
 		Keyword:  "飲料店",
 	}
@@ -79,32 +79,31 @@ func (server *Server) handleMap(parms handleMapParms) {
 }
 
 func (server *Server) saveResults(parms saveResultsParms) {
+	handcupInfo := models.HandcupInfo{}
 	HistoryRequest := models.HistoryRequest{}
 	HistoryRequest.ReqLatitude = parms.location.Lat
 	HistoryRequest.ReqLongitude = parms.location.Lng
 	latestGroupID := HistoryRequest.FindLatestGroupID(server.DB)
 
-	hisReq, err := HistoryRequest.CheckHistoryReq(server.DB)
+	hisReqResp, err := HistoryRequest.CheckHistoryReq(server.DB)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Print("檢查回傳值", hisReq)
+	fmt.Println("檢查回傳值", hisReqResp)
 	// 如果 HistoryRequest 內沒有紀錄
-	if hisReq == nil {
+	if len(hisReqResp) == 0 {
 		for _, s := range parms.results {
-			handcupInfo := models.HandcupInfo{
-				GoogleId:       s.ID,
-				PlaceId:        s.PlaceID,
-				Name:           s.Name,
-				Latitude:       s.Geometry.Location.Lat,
-				Longitude:      s.Geometry.Location.Lng,
-				Rating:         s.Rating,
-				ImageReference: s.Photos[0].PhotoReference,
-				ImageWidth:     s.Photos[0].Width,
-				ImageHeight:    s.Photos[0].Height,
-				ImageUrl:       server.requestPhoto(s.Photos[0].PhotoReference),
-			}
+			handcupInfo.GoogleId = s.ID
+			handcupInfo.PlaceId = s.PlaceID
+			handcupInfo.Name = s.Name
+			handcupInfo.Latitude = s.Geometry.Location.Lat
+			handcupInfo.Longitude = s.Geometry.Location.Lng
+			handcupInfo.Rating = s.Rating
+			handcupInfo.ImageReference = s.Photos[0].PhotoReference
+			handcupInfo.ImageWidth = s.Photos[0].Width
+			handcupInfo.ImageHeight = s.Photos[0].Height
+			handcupInfo.ImageUrl = server.requestPhoto(s.Photos[0].PhotoReference)
 			server.requestPhoto(s.Photos[0].PhotoReference)
 			// pretty.Println(handcupInfo)
 
@@ -128,7 +127,16 @@ func (server *Server) saveResults(parms saveResultsParms) {
 		}
 	} else {
 		// TODO: Handle has history request
-		fmt.Println("群組ID:", hisReq.GroupId)
+		for _, r := range hisReqResp {
+			fmt.Println("Group ID:", r.GroupId)
+			fmt.Println("Handcup ID:", r.HandcupId)
+			resp, err := handcupInfo.FindHandcupInfoByID(server.DB, r.HandcupId) // Get handcup info by id
+
+			if err != nil {
+				fmt.Println("為甚麼會錯:", err)
+			}
+			fmt.Println("飲料店資料抓到你啦:", resp)
+		}
 	}
 }
 

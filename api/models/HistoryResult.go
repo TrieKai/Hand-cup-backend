@@ -59,50 +59,39 @@ func (h *HistoryRequest) FindLatestGroupID(db *gorm.DB) uint32 {
 	return max
 }
 
-func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
+func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) ([]HandcupIdResponse, error) {
 	var err error
+	var respData []CheckHRResponse
+	var resp []HandcupIdResponse
 	maxLat := h.ReqLatitude + 0.0009
 	minLat := h.ReqLatitude - 0.0009
 	maxLng := h.ReqLongitude + 0.0009
 	minLng := h.ReqLongitude - 0.0009
 
-	// rows, err := db.
-	// 	Table("history_requests").
-	// 	Select("group_id, req_latitude, req_longitude, update_time").
-	// 	Where("(req_latitude BETWEEN ? AND ?) AND (req_longitude BETWEEN ? AND ?)", minLat, maxLat, minLng, maxLng).
-	// 	Group("group_id").
-	// 	Rows()
-	// defer rows.Close()
-	// isExist := rows.Next()
-	// fmt.Println("下一個:", isExist)
-
-	var respData []CheckHRResponse
 	db.
 		Table("history_requests").
 		Select("group_id, req_latitude, req_longitude, update_time").
 		Where("(req_latitude BETWEEN ? AND ?) AND (req_longitude BETWEEN ? AND ?)", minLat, maxLat, minLng, maxLng).
 		Group("group_id").
 		Find(&respData)
-	// fmt.Println("測試一下:", resp)
 	fmt.Println("哈哈是我啦:", respData)
 
 	// 如果在 History requests 內有資料
 	if len(respData) != 0 {
 		fmt.Println("已搜尋到的資料", respData)
-		h.findHandcupId(db, respData[0].GroupId) // 以 GroupId 去找所有的 HandcupId
+		resp = h.findHandcupId(db, respData[0].GroupId) // 以 GroupId 去找所有的 HandcupId
 	} else {
 		return nil, err
 	}
 
-	return h, err
+	return resp, err
 }
 
 func (h *HistoryRequest) findHandcupId(db *gorm.DB, groupId uint32) []HandcupIdResponse {
-	var HandcupIdResponse []HandcupIdResponse
-	db.Table("history_requests").Select("group_id, handcup_id").Where("group_id = ?", groupId).Find(&HandcupIdResponse)
-	fmt.Println("抓到你摟:", HandcupIdResponse)
+	var resp []HandcupIdResponse
+	db.Table("history_requests").Select("group_id, handcup_id").Where("group_id = ?", groupId).Find(&resp)
 
-	return HandcupIdResponse
+	return resp
 }
 
 func (h *HistoryRequest) SaveHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
