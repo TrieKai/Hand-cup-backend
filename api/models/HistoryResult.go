@@ -32,11 +32,12 @@ type HandcupIdResponse struct {
 	HandcupId uint32 `gorm:"not null;" json:"handcup_id"`
 }
 
-func (h *HistoryRequest) InitData(latestHisReqID uint32, latestGroupID uint32, latestID uint32) {
+func (h *HistoryRequest) InitData(latestHisReqID uint32, latestGroupID uint32, latestID uint32, distance uint) {
 	h.ID = latestHisReqID + 1
 	h.GroupId = latestGroupID + 1
 	h.HandcupId = latestID
 	h.HandcupInfo = HandcupInfo{}
+	h.Distance = distance
 	h.CreateTime = time.Now()
 	h.UpdateTime = time.Now()
 }
@@ -74,11 +75,11 @@ func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) ([]HandcupIdResponse, erro
 		Where("(req_latitude BETWEEN ? AND ?) AND (req_longitude BETWEEN ? AND ?)", minLat, maxLat, minLng, maxLng).
 		Group("group_id").
 		Find(&respData)
-	fmt.Println("哈哈是我啦:", respData)
+
+	fmt.Println("DB內已搜尋到的資料:", respData)
 
 	// 如果在 History requests 內有資料
 	if len(respData) != 0 {
-		fmt.Println("已搜尋到的資料", respData)
 		resp = h.findHandcupId(db, respData[0].GroupId) // 以 GroupId 去找所有的 HandcupId
 	} else {
 		return nil, err

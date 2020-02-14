@@ -28,6 +28,7 @@ type saveResultsParms struct {
 	// r        *http.Request
 	// location maps.LatLng
 	// distance uint
+	handcupIdResponse []models.HandcupIdResponse
 }
 
 type fakeCoordinate struct {
@@ -38,8 +39,8 @@ type fakeCoordinate struct {
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	//24.9927061, 121.4491151 24.9888971, 121.4481381
 	var fakeCoordinate fakeCoordinate
-	fakeCoordinate.lat = 24.9927061
-	fakeCoordinate.lng = 121.4491151
+	fakeCoordinate.lat = 24.9888971
+	fakeCoordinate.lng = 121.4481381
 
 	HistoryRequest := models.HistoryRequest{}
 	HistoryRequest.ReqLatitude = fakeCoordinate.lat
@@ -59,7 +60,7 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 		server.getGoogleMap(handleMapParms)
 	} else {
 		// 如果 HistoryRequest 內有紀錄
-		server.getDatabase(saveResultsParms{w: w})
+		server.getDatabase(saveResultsParms{w: w, handcupIdResponse: hisReqResp})
 	}
 }
 
@@ -75,7 +76,7 @@ func (server *Server) getGoogleMap(parms handleMapParms) {
 	}
 
 	r := &maps.NearbySearchRequest{
-		Location: &maps.LatLng{Lat: 24.9888971, Lng: 121.4481381}, //24.9927061, 121.4491151 24.9888971, 121.4481381
+		Location: &maps.LatLng{Lat: parms.location.Lat, Lng: parms.location.Lng},
 		Radius:   10,
 		Keyword:  "飲料店",
 	}
@@ -116,8 +117,8 @@ func (server *Server) getGoogleMap(parms handleMapParms) {
 			handcupInfo.ImageHeight = 0
 		}
 		handcupInfo.ImageUrl = server.requestPhoto(handcupInfo.ImageReference)
-		// pretty.Println(handcupInfo)
 
+		// 將 Google API 的資料存入 DB [handcup_infos]
 		handcupInfoCreated, err := handcupInfo.SaveHandcupInfo(server.DB)
 		if err != nil {
 			formattedError := formaterror.FormatError(err.Error())
@@ -128,9 +129,8 @@ func (server *Server) getGoogleMap(parms handleMapParms) {
 		latestID := handcupInfo.FindLatestID(server.DB)
 
 		latestHisReqID := HistoryRequest.FindLatestHisReqID(server.DB)
-		// fmt.Print(latestHisReqID, latestGroupID, latestID)
-		HistoryRequest.InitData(latestHisReqID, latestGroupID, latestID)
-
+		HistoryRequest.InitData(latestHisReqID, latestGroupID, latestID, r.Radius)
+		// 將 Google API 的資料存入 DB [history_requests]
 		HistoryRequest.SaveHistoryReq(server.DB)
 
 		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
@@ -141,14 +141,8 @@ func (server *Server) getGoogleMap(parms handleMapParms) {
 
 func (server *Server) getDatabase(parms saveResultsParms) {
 	handcupInfo := models.HandcupInfo{}
-	HistoryRequest := models.HistoryRequest{}
 
-	hisReqResp, err := HistoryRequest.CheckHistoryReq(server.DB)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, r := range hisReqResp {
+	for _, r := range parms.handcupIdResponse {
 		fmt.Println("Group ID:", r.GroupId)
 		fmt.Println("Handcup ID:", r.HandcupId)
 		resp, err := handcupInfo.FindHandcupInfoByID(server.DB, r.HandcupId) // Get handcup info by id
