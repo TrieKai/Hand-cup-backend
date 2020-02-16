@@ -71,14 +71,34 @@ func (h *HandcupInfo) FindHandcupInfoByID(db *gorm.DB, hid uint32) (HandcupInfo,
 	return handcupInfo, err
 }
 
+func (h *HandcupInfo) FindHandcupInfoByPlaceID(db *gorm.DB, pid string) (HandcupInfo, error) {
+	var err error
+	handcupInfo := HandcupInfo{}
+	err = db.Debug().Table("handcup_infos").Where("place_id = ?", pid).Find(&handcupInfo).Error
+	if err != nil {
+		return handcupInfo, err
+	}
+	if gorm.IsRecordNotFoundError(err) {
+		return handcupInfo, errors.New("HandcupInfo Not Found")
+	}
+
+	return handcupInfo, err
+}
+
 func (h *HandcupInfo) UpdateAHandcupInfo(db *gorm.DB, hid uint32) (*HandcupInfo, error) {
 	var err error
 	db = db.Debug().Model(&HandcupInfo{}).Where("id = ?", hid).Take(&HandcupInfo{}).UpdateColumns(
 		map[string]interface{}{
-			"name":      h.Name,
-			"imageUrl":  h.ImageUrl,
-			"rating":    h.Rating,
-			"update_at": time.Now(),
+			"google_id":       h.GoogleId,
+			"name":            h.Name,
+			"latitude":        h.Latitude,
+			"longitude":       h.Longitude,
+			"rating":          h.Rating,
+			"image_reference": h.ImageReference,
+			"image_width":     h.ImageWidth,
+			"image_height":    h.ImageHeight,
+			"imageUrl":        h.ImageUrl,
+			"update_time":     time.Now(),
 		},
 	)
 	if db.Error != nil {

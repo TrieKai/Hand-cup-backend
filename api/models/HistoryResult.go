@@ -27,15 +27,22 @@ type CheckHRResponse struct {
 	UpdateTime   time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
+// type GetGroupHisReqByGId struct {
+// 	GroupId      uint32  `grom:"not null;" json:"group_id"`
+// 	ReqLatitude  float64 `grom:"not null;" json:"req_latitude"`
+// 	ReqLongitude float64 `grom:"not null;" json:"req_longitude"`
+// }
+
 type HandcupIdResponse struct {
-	GroupId   uint32 `grom:"not null;" json:"group_id"`
-	HandcupId uint32 `gorm:"not null;" json:"handcup_id"`
+	GroupId    uint32    `grom:"not null;" json:"group_id"`
+	HandcupId  uint32    `gorm:"not null;" json:"handcup_id"`
+	UpdateTime time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
-func (h *HistoryRequest) InitData(latestHisReqID uint32, latestGroupID uint32, latestID uint32, distance uint) {
+func (h *HistoryRequest) InitData(latestHisReqID uint32, groupID uint32, handcupID uint32, distance uint) {
 	h.ID = latestHisReqID + 1
-	h.GroupId = latestGroupID + 1
-	h.HandcupId = latestID
+	h.GroupId = groupID
+	h.HandcupId = handcupID
 	h.HandcupInfo = HandcupInfo{}
 	h.Distance = distance
 	h.CreateTime = time.Now()
@@ -90,7 +97,7 @@ func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) ([]HandcupIdResponse, erro
 
 func (h *HistoryRequest) findHandcupId(db *gorm.DB, groupId uint32) []HandcupIdResponse {
 	var resp []HandcupIdResponse
-	db.Table("history_requests").Select("group_id, handcup_id").Where("group_id = ?", groupId).Find(&resp)
+	db.Table("history_requests").Select("group_id, handcup_id, update_time").Where("group_id = ?", groupId).Find(&resp)
 
 	return resp
 }
@@ -111,42 +118,64 @@ func (h *HistoryRequest) SaveHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
 	return h, nil
 }
 
-func (h *HistoryRequest) FindAllHistoryRequests(db *gorm.DB) (*[]HistoryRequest, error) {
-	var err error
-	HistoryRequests := []HistoryRequest{}
-	err = db.Debug().Model(&HistoryRequest{}).Limit(100).Find(&HistoryRequests).Error
-	if err != nil {
-		return &[]HistoryRequest{}, err
-	}
-	if len(HistoryRequests) > 0 {
-		for i, _ := range HistoryRequests {
-			err := db.Debug().Model(&HandcupInfo{}).Where("id = ?", HistoryRequests[i].HandcupId).Take(&HistoryRequests[i].HandcupInfo).Error
-			if err != nil {
-				return &[]HistoryRequest{}, err
-			}
-		}
-	}
-	return &HistoryRequests, nil
+// func (h *HistoryRequest) FindAllHistoryRequests(db *gorm.DB) (*[]HistoryRequest, error) {
+// 	var err error
+// 	HistoryRequests := []HistoryRequest{}
+// 	err = db.Debug().Model(&HistoryRequest{}).Limit(100).Find(&HistoryRequests).Error
+// 	if err != nil {
+// 		return &[]HistoryRequest{}, err
+// 	}
+// 	if len(HistoryRequests) > 0 {
+// 		for i, _ := range HistoryRequests {
+// 			err := db.Debug().Model(&HandcupInfo{}).Where("id = ?", HistoryRequests[i].HandcupId).Take(&HistoryRequests[i].HandcupInfo).Error
+// 			if err != nil {
+// 				return &[]HistoryRequest{}, err
+// 			}
+// 		}
+// 	}
+// 	return &HistoryRequests, nil
+// }
+
+func (h *HistoryRequest) GetGroupHisReqByGId(db *gorm.DB, groupId uint32) CheckHRResponse {
+	var respData CheckHRResponse
+
+	db.
+		Table("history_requests").
+		Select("group_id, req_latitude, req_longitude").
+		Where("group_id = ?", groupId).
+		First(&respData)
+
+	return respData
 }
 
-func (h *HistoryRequest) FindHistoryRequestByID(db *gorm.DB, pid uint64) (*HistoryRequest, error) {
-	var err error
-	err = db.Debug().Model(&HistoryRequest{}).Where("id = ?", pid).Take(&h).Error
-	if err != nil {
-		return &HistoryRequest{}, err
-	}
-	if h.ID != 0 {
-		err = db.Debug().Model(&HandcupInfo{}).Where("id = ?", h.HandcupId).Take(&h.HandcupInfo).Error
-		if err != nil {
-			return &HistoryRequest{}, err
-		}
-	}
-	return h, nil
-}
+// func (h *HistoryRequest) GetIDByHandcupID(db *gorm.DB, hId uint32) uint32 {
+// 	var id uint32
 
-func (h *HistoryRequest) UpdateAHistoryRequest(db *gorm.DB, uid uint32) (*HistoryRequest, error) {
-	var err error
+// 	db.
+// 		Table("history_requests").
+// 		Select("id").
+// 		Where("handcup_id = ?", hId)
 
+// 	return id
+// }
+
+// func (h *HistoryRequest) FindHistoryRequestByID(db *gorm.DB, pid uint64) (*HistoryRequest, error) {
+// 	var err error
+// 	err = db.Debug().Model(&HistoryRequest{}).Where("id = ?", pid).Take(&h).Error
+// 	if err != nil {
+// 		return &HistoryRequest{}, err
+// 	}
+// 	if h.ID != 0 {
+// 		err = db.Debug().Model(&HandcupInfo{}).Where("id = ?", h.HandcupId).Take(&h.HandcupInfo).Error
+// 		if err != nil {
+// 			return &HistoryRequest{}, err
+// 		}
+// 	}
+// 	return h, nil
+// }
+
+func (h *HistoryRequest) UpdateAHistoryRequest(db *gorm.DB) (*HistoryRequest, error) {
+	var err error
 	err = db.Debug().Model(&HistoryRequest{}).Where("id = ?", h.ID).Updates(HistoryRequest{Distance: h.Distance, UpdateTime: time.Now()}).Error
 	if err != nil {
 		return &HistoryRequest{}, err
