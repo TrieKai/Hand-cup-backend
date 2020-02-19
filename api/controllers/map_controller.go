@@ -36,12 +36,6 @@ type saveResultsParms struct {
 	handcupIdResponse []models.HandcupIdResponse
 }
 
-type timeExpireParms struct {
-	w           http.ResponseWriter
-	r           *http.Request
-	handcupInfo models.HandcupIdResponse
-}
-
 type fakeCoordinate struct {
 	lat float64
 	lng float64
@@ -50,8 +44,8 @@ type fakeCoordinate struct {
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	//24.9927061, 121.4491151 24.9888971, 121.4481381
 	var fakeCoordinate fakeCoordinate
-	fakeCoordinate.lat = 24.9927061
-	fakeCoordinate.lng = 121.4491151
+	fakeCoordinate.lat = 24.9888971
+	fakeCoordinate.lng = 121.4481381
 
 	HistoryRequest := models.HistoryRequest{}
 	HistoryRequest.ReqLatitude = fakeCoordinate.lat
@@ -261,20 +255,16 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 				fmt.Println("為甚麼會錯:", err)
 			}
 			fmt.Println("飲料店資料抓到你啦:", resp)
+			parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, resp.GoogleId))
 			responses.JSON(parms.w, http.StatusOK, resp)
 		}
 	}
 
 	// 如果資料過期
 	if timeIsExpire {
-		t := timeExpireParms{r: parms.r, w: parms.w, handcupInfo: parms.handcupIdResponse[0]}
-		server.handleDataTimeExpire(t)
+		t := handleUpdateMapParms{r: parms.r, w: parms.w, groupId: parms.handcupIdResponse[0].GroupId}
+		server.handleUpdateGoogleMap(t) // Call handleUpdateGoogleMap func
 	}
-}
-
-func (server *Server) handleDataTimeExpire(parms timeExpireParms) {
-	p := handleUpdateMapParms{w: parms.w, r: parms.r, groupId: parms.handcupInfo.GroupId}
-	server.handleUpdateGoogleMap(p) // Call handleUpdateGoogleMap func
 }
 
 func (server *Server) requestPhoto(ref string) string {
