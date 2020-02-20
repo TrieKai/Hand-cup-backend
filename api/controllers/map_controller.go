@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"handCup-project-backend/api/models"
 	"handCup-project-backend/api/responses"
 	formaterror "handCup-project-backend/api/utils"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -36,20 +38,49 @@ type saveResultsParms struct {
 	handcupIdResponse []models.HandcupIdResponse
 }
 
+type reqData struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+type respData struct {
+	placeId   string  `json:"place_id"`
+	name      string  `json:"name"`
+	latitude  float64 `json:"latitude"`
+	longitude float64 `json:"longitude"`
+	rating    float32 `json:"rating"`
+	imageUrl  string  `json:"image_url"`
+}
+
+type respDataList []respData
+
 type fakeCoordinate struct {
 	lat float64
 	lng float64
 }
 
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+	var reqData reqData
+	err = json.Unmarshal(body, &reqData)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Requset body內容", body, reqData)
 	//24.9927061, 121.4491151 24.9888971, 121.4481381
 	var fakeCoordinate fakeCoordinate
-	fakeCoordinate.lat = 24.9888971
-	fakeCoordinate.lng = 121.4481381
+	fakeCoordinate.lat = 24.9927061
+	fakeCoordinate.lng = 121.4491151
 
 	HistoryRequest := models.HistoryRequest{}
 	HistoryRequest.ReqLatitude = fakeCoordinate.lat
 	HistoryRequest.ReqLongitude = fakeCoordinate.lng
+	// HistoryRequest.ReqLatitude = reqData.Latitude
+	// HistoryRequest.ReqLongitude = reqData.Longitude
 
 	hisReqResp, err := HistoryRequest.CheckHistoryReq(server.DB)
 	if err != nil {
