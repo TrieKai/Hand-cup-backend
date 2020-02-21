@@ -121,23 +121,8 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 	latestGroupID := HistoryRequest.FindLatestGroupID(server.DB)
 
 	for _, s := range resp.Results {
+		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
 		handcupInfo.ID = handcupInfo.FindLatestID(server.DB) + 1
-		handcupInfo.GoogleId = s.ID
-		handcupInfo.PlaceId = s.PlaceID
-		handcupInfo.Name = s.Name
-		handcupInfo.Latitude = s.Geometry.Location.Lat
-		handcupInfo.Longitude = s.Geometry.Location.Lng
-		handcupInfo.Rating = s.Rating
-		if s.Photos != nil {
-			handcupInfo.ImageReference = s.Photos[0].PhotoReference
-			handcupInfo.ImageWidth = s.Photos[0].Width
-			handcupInfo.ImageHeight = s.Photos[0].Height
-		} else {
-			handcupInfo.ImageReference = ""
-			handcupInfo.ImageWidth = 0
-			handcupInfo.ImageHeight = 0
-		}
-		handcupInfo.ImageUrl = server.requestPhoto(handcupInfo.ImageReference)
 
 		// 處理要回傳給前端的資料
 		respData := models.HandcupRespData{
@@ -211,21 +196,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 			log.Fatal(err)
 		}
 
-		handcupInfo.GoogleId = s.ID
-		handcupInfo.Name = s.Name
-		handcupInfo.Latitude = s.Geometry.Location.Lat
-		handcupInfo.Longitude = s.Geometry.Location.Lng
-		handcupInfo.Rating = s.Rating
-		if s.Photos != nil {
-			handcupInfo.ImageReference = s.Photos[0].PhotoReference
-			handcupInfo.ImageWidth = s.Photos[0].Width
-			handcupInfo.ImageHeight = s.Photos[0].Height
-		} else {
-			handcupInfo.ImageReference = ""
-			handcupInfo.ImageWidth = 0
-			handcupInfo.ImageHeight = 0
-		}
-		handcupInfo.ImageUrl = server.requestPhoto(handcupInfo.ImageReference)
+		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
 
 		// 處理要回傳給前端的資料
 		respData := models.HandcupRespData{
@@ -308,6 +279,28 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 
 	// parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI))
 	responses.JSON(parms.w, http.StatusOK, respDataList)
+}
+
+func (server *Server) handleHandcupInfoData(s maps.PlacesSearchResult) models.HandcupInfo {
+	handcupInfo := models.HandcupInfo{
+		GoogleId:  s.ID,
+		Name:      s.Name,
+		Latitude:  s.Geometry.Location.Lat,
+		Longitude: s.Geometry.Location.Lng,
+		Rating:    s.Rating,
+	}
+	if s.Photos != nil {
+		handcupInfo.ImageReference = s.Photos[0].PhotoReference
+		handcupInfo.ImageWidth = s.Photos[0].Width
+		handcupInfo.ImageHeight = s.Photos[0].Height
+	} else {
+		handcupInfo.ImageReference = ""
+		handcupInfo.ImageWidth = 0
+		handcupInfo.ImageHeight = 0
+	}
+	handcupInfo.ImageUrl = server.requestPhoto(handcupInfo.ImageReference)
+
+	return handcupInfo
 }
 
 func (server *Server) requestPhoto(ref string) string {
