@@ -27,12 +27,6 @@ type CheckHRResponse struct {
 	UpdateTime   time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
-// type GetGroupHisReqByGId struct {
-// 	GroupId      uint32  `grom:"not null;" json:"group_id"`
-// 	ReqLatitude  float64 `grom:"not null;" json:"req_latitude"`
-// 	ReqLongitude float64 `grom:"not null;" json:"req_longitude"`
-// }
-
 type HandcupIdResponse struct {
 	GroupId    uint32    `grom:"not null;" json:"group_id"`
 	HandcupId  uint32    `gorm:"not null;" json:"handcup_id"`

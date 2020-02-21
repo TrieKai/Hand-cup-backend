@@ -126,12 +126,13 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 
 		// 處理要回傳給前端的資料
 		respData := models.HandcupRespData{
-			PlaceId:   handcupInfo.PlaceId,
-			Name:      handcupInfo.Name,
-			Latitude:  handcupInfo.Latitude,
-			Longitude: handcupInfo.Longitude,
-			Rating:    handcupInfo.Rating,
-			ImageUrl:  handcupInfo.ImageUrl,
+			PlaceId:      handcupInfo.PlaceId,
+			Name:         handcupInfo.Name,
+			Latitude:     handcupInfo.Latitude,
+			Longitude:    handcupInfo.Longitude,
+			Rating:       handcupInfo.Rating,
+			RatingsTotal: handcupInfo.RatingsTotal,
+			ImageUrl:     handcupInfo.ImageUrl,
 		}
 		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
 
@@ -200,12 +201,13 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 
 		// 處理要回傳給前端的資料
 		respData := models.HandcupRespData{
-			PlaceId:   handcupInfo.PlaceId,
-			Name:      handcupInfo.Name,
-			Latitude:  handcupInfo.Latitude,
-			Longitude: handcupInfo.Longitude,
-			Rating:    handcupInfo.Rating,
-			ImageUrl:  handcupInfo.ImageUrl,
+			PlaceId:      handcupInfo.PlaceId,
+			Name:         handcupInfo.Name,
+			Latitude:     handcupInfo.Latitude,
+			Longitude:    handcupInfo.Longitude,
+			Rating:       handcupInfo.Rating,
+			RatingsTotal: handcupInfo.RatingsTotal,
+			ImageUrl:     handcupInfo.ImageUrl,
 		}
 		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
 
@@ -283,12 +285,15 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 
 func (server *Server) handleHandcupInfoData(s maps.PlacesSearchResult) models.HandcupInfo {
 	handcupInfo := models.HandcupInfo{
-		GoogleId:  s.ID,
-		Name:      s.Name,
-		Latitude:  s.Geometry.Location.Lat,
-		Longitude: s.Geometry.Location.Lng,
-		Rating:    s.Rating,
+		GoogleId:     s.ID,
+		PlaceId:      s.PlaceID,
+		Name:         s.Name,
+		Latitude:     s.Geometry.Location.Lat,
+		Longitude:    s.Geometry.Location.Lng,
+		Rating:       s.Rating,
+		RatingsTotal: s.UserRatingsTotal,
 	}
+
 	if s.Photos != nil {
 		handcupInfo.ImageReference = s.Photos[0].PhotoReference
 		handcupInfo.ImageWidth = s.Photos[0].Width

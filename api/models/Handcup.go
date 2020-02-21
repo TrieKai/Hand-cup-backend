@@ -16,6 +16,7 @@ type HandcupInfo struct {
 	Latitude       float64   `json:"latitude"`
 	Longitude      float64   `json:"longitude"`
 	Rating         float32   `json:"rating"`
+	RatingsTotal   int       `json:"ratings_total"`
 	ImageReference string    `json:"image_reference"`
 	ImageWidth     int       `json:"image_width"`
 	ImageHeight    int       `json:"image_height"`
@@ -25,12 +26,13 @@ type HandcupInfo struct {
 }
 
 type HandcupRespData struct {
-	PlaceId   string  `json:"place_id"`
-	Name      string  `json:"name"`
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Rating    float32 `json:"rating"`
-	ImageUrl  string  `json:"image_url"`
+	PlaceId      string  `json:"place_id"`
+	Name         string  `json:"name"`
+	Latitude     float64 `json:"latitude"`
+	Longitude    float64 `json:"longitude"`
+	Rating       float32 `json:"rating"`
+	RatingsTotal int     `json:"ratings_total"`
+	ImageUrl     string  `json:"image_url"`
 }
 
 func (h *HandcupInfo) FindLatestID(db *gorm.DB) uint32 {
@@ -44,7 +46,8 @@ func (h *HandcupInfo) FindLatestID(db *gorm.DB) uint32 {
 func (h *HandcupInfo) SaveHandcupInfo(db *gorm.DB) (*HandcupInfo, error) {
 	var err error
 	isExist := db.Raw("SELECT place_id FROM handcup_infos WHERE place_id = ?", h.PlaceId).Scan(&h)
-	fmt.Println("place_id影響列數:", isExist.RowsAffected)
+	fmt.Println("搜尋 DB 之 place_id 影響列數:", isExist.RowsAffected)
+	fmt.Println("SaveHandcupInfo - handcup info:", h)
 	// If this place_id not exist
 	if isExist.RowsAffected == 0 {
 		err = db.Debug().Create(&h).Error
