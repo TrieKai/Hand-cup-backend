@@ -145,7 +145,7 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 		}
 
 		latestHisReqID := HistoryRequest.FindLatestHisReqID(server.DB)
-		HistoryRequest.InitData(latestHisReqID, latestGroupID+1, handcupInfoCreated.ID, r.Radius)
+		HistoryRequest.InitData(latestHisReqID, latestGroupID+1, handcupInfoCreated.ID, r.Radius, r.Keyword)
 		// 將 Google API 的資料存入 DB [history_requests]
 		HistoryRequest.SaveHistoryReq(server.DB)
 	}
@@ -237,7 +237,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 
 			fmt.Println("欸這一區有新的飲料店，已經新增了喔", handcupInfoCreated)
 			latestHisReqID := HistoryRequest.FindLatestHisReqID(server.DB)
-			HistoryRequest.InitData(latestHisReqID, g.GroupId, handcupInfoCreated.ID, r.Radius)
+			HistoryRequest.InitData(latestHisReqID, g.GroupId, handcupInfoCreated.ID, r.Radius, r.Keyword)
 			// 將 Google API 的資料存入 DB [history_requests]
 			HistoryRequest.SaveHistoryReq(server.DB)
 		}

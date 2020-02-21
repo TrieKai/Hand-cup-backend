@@ -16,6 +16,7 @@ type HistoryRequest struct {
 	ReqLatitude  float64     `grom:"not null;" json:"req_latitude"`
 	ReqLongitude float64     `grom:"not null;" json:"req_longitude"`
 	Distance     uint        `gorm:"not null;" json:"distance"`
+	Keyword      string      `gorm:"not null;" json:"keyword"`
 	CreateTime   time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"create_time"`
 	UpdateTime   time.Time   `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
@@ -33,12 +34,13 @@ type HandcupIdResponse struct {
 	UpdateTime time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
-func (h *HistoryRequest) InitData(latestHisReqID uint32, groupID uint32, handcupID uint32, distance uint) {
+func (h *HistoryRequest) InitData(latestHisReqID uint32, groupID uint32, handcupID uint32, distance uint, keyword string) {
 	h.ID = latestHisReqID + 1
 	h.GroupId = groupID
 	h.HandcupId = handcupID
 	h.HandcupInfo = HandcupInfo{}
 	h.Distance = distance
+	h.Keyword = keyword
 	h.CreateTime = time.Now()
 	h.UpdateTime = time.Now()
 }
