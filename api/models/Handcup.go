@@ -24,6 +24,15 @@ type HandcupInfo struct {
 	UpdateTime     time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
+type HandcupRespData struct {
+	PlaceId   string  `json:"place_id"`
+	Name      string  `json:"name"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Rating    float32 `json:"rating"`
+	ImageUrl  string  `json:"image_url"`
+}
+
 func (h *HandcupInfo) FindLatestID(db *gorm.DB) uint32 {
 	var latestID uint32
 	row := db.Debug().Table("handcup_infos").Select("MAX(id)").Row()
@@ -57,9 +66,9 @@ func (h *HandcupInfo) FindAllHandcupInfo(db *gorm.DB) (*[]HandcupInfo, error) {
 	return &HandcupInfoList, err
 }
 
-func (h *HandcupInfo) FindHandcupInfoByID(db *gorm.DB, hid uint32) (HandcupInfo, error) {
+func (h *HandcupInfo) FindHandcupInfoByID(db *gorm.DB, hid uint32) (HandcupRespData, error) {
 	var err error
-	handcupInfo := HandcupInfo{}
+	handcupInfo := HandcupRespData{}
 	err = db.Debug().Table("handcup_infos").Where("id = ?", hid).Find(&handcupInfo).Error
 	if err != nil {
 		return handcupInfo, err

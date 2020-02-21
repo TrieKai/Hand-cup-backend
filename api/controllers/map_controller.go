@@ -43,17 +43,6 @@ type reqData struct {
 	Longitude float64 `json:"longitude"`
 }
 
-type respData struct {
-	placeId   string  `json:"place_id"`
-	name      string  `json:"name"`
-	latitude  float64 `json:"latitude"`
-	longitude float64 `json:"longitude"`
-	rating    float32 `json:"rating"`
-	imageUrl  string  `json:"image_url"`
-}
-
-type respDataList []respData
-
 type fakeCoordinate struct {
 	lat float64
 	lng float64
@@ -70,17 +59,11 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Requset body內容", body, reqData)
+	fmt.Println("Requset body 內容:", reqData)
 	//24.9927061, 121.4491151 24.9888971, 121.4481381
-	var fakeCoordinate fakeCoordinate
-	fakeCoordinate.lat = 24.9927061
-	fakeCoordinate.lng = 121.4491151
-
 	HistoryRequest := models.HistoryRequest{}
-	HistoryRequest.ReqLatitude = fakeCoordinate.lat
-	HistoryRequest.ReqLongitude = fakeCoordinate.lng
-	// HistoryRequest.ReqLatitude = reqData.Latitude
-	// HistoryRequest.ReqLongitude = reqData.Longitude
+	HistoryRequest.ReqLatitude = reqData.Latitude
+	HistoryRequest.ReqLongitude = reqData.Longitude
 
 	hisReqResp, err := HistoryRequest.CheckHistoryReq(server.DB)
 	if err != nil {
@@ -91,8 +74,8 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	if len(hisReqResp) == 0 {
 		// 如果 HistoryRequest 內沒有紀錄
 		handleMapParms := handleMapParms{w: w, r: r}
-		handleMapParms.location.Lat = fakeCoordinate.lat
-		handleMapParms.location.Lng = fakeCoordinate.lng
+		handleMapParms.location.Lat = reqData.Latitude
+		handleMapParms.location.Lng = reqData.Longitude
 		server.handleGoogleMap(handleMapParms)
 	} else {
 		// 如果 HistoryRequest 內有紀錄
@@ -119,6 +102,7 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 	if len(parms.nextToken) != 0 {
 		r.PageToken = parms.nextToken
 	}
+	// Call Google map API
 	resp, err := c.NearbySearch(context.Background(), r)
 	if err != nil {
 		log.Fatalf("Request nearby search fatal error: %s", err)
@@ -131,6 +115,7 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 
 	handcupInfo := models.HandcupInfo{}
 	HistoryRequest := models.HistoryRequest{}
+	respDataList := []models.HandcupRespData{}
 	HistoryRequest.ReqLatitude = parms.location.Lat
 	HistoryRequest.ReqLongitude = parms.location.Lng
 	latestGroupID := HistoryRequest.FindLatestGroupID(server.DB)
@@ -154,7 +139,18 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 		}
 		handcupInfo.ImageUrl = server.requestPhoto(handcupInfo.ImageReference)
 
-		// 將 Google API 的資料存入 DB [handcup_infos]
+		// 處理要回傳給前端的資料
+		respData := models.HandcupRespData{
+			PlaceId:   handcupInfo.PlaceId,
+			Name:      handcupInfo.Name,
+			Latitude:  handcupInfo.Latitude,
+			Longitude: handcupInfo.Longitude,
+			Rating:    handcupInfo.Rating,
+			ImageUrl:  handcupInfo.ImageUrl,
+		}
+		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
+
+		// 將 Google map API 的資料存入 DB [handcup_infos]
 		handcupInfoCreated, err := handcupInfo.SaveHandcupInfo(server.DB)
 		if err != nil {
 			formattedError := formaterror.FormatError(err.Error())
@@ -166,11 +162,10 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 		HistoryRequest.InitData(latestHisReqID, latestGroupID+1, handcupInfoCreated.ID, r.Radius)
 		// 將 Google API 的資料存入 DB [history_requests]
 		HistoryRequest.SaveHistoryReq(server.DB)
-
-		parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
-		// responses.JSON(parms.w, http.StatusOK, handcupInfoCreated)
-		responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)
 	}
+
+	// parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI))
+	responses.JSON(parms.w, http.StatusCreated, respDataList)
 }
 
 func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
@@ -208,6 +203,8 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 		server.handleUpdateGoogleMap(handleUpdateMapParms{nextToken: resp.NextPageToken})
 	}
 
+	respDataList := []models.HandcupRespData{}
+
 	for _, s := range resp.Results {
 		h, err := handcupInfo.FindHandcupInfoByPlaceID(server.DB, s.PlaceID)
 		if err != nil {
@@ -229,6 +226,18 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 			handcupInfo.ImageHeight = 0
 		}
 		handcupInfo.ImageUrl = server.requestPhoto(handcupInfo.ImageReference)
+
+		// 處理要回傳給前端的資料
+		respData := models.HandcupRespData{
+			PlaceId:   handcupInfo.PlaceId,
+			Name:      handcupInfo.Name,
+			Latitude:  handcupInfo.Latitude,
+			Longitude: handcupInfo.Longitude,
+			Rating:    handcupInfo.Rating,
+			ImageUrl:  handcupInfo.ImageUrl,
+		}
+		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
+
 		// 如果資料庫內有這筆資訊
 		if h.ID != 0 {
 			handcupInfo.ID = h.ID
@@ -238,13 +247,11 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 				responses.ERROR(parms.w, http.StatusInternalServerError, formattedError)
 				return
 			}
+
 			fmt.Println("我改飲料店資訊了喔", handcupInfoUpdated)
 			HistoryRequest.GroupId = g.GroupId
 			HistoryRequest.ID = handcupInfoUpdated.ID
 			HistoryRequest.UpdateAHistoryRequest(server.DB)
-			parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, handcupInfoUpdated.GoogleId))
-			// responses.JSON(parms.w, http.StatusOK, handcupInfoCreated)
-			responses.JSON(parms.w, http.StatusCreated, handcupInfoUpdated)
 		} else {
 			handcupInfo.ID = handcupInfo.FindLatestID(server.DB) + 1
 			// 將 Google API 的資料存入 DB [handcup_infos]
@@ -254,21 +261,24 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 				responses.ERROR(parms.w, http.StatusInternalServerError, formattedError)
 				return
 			}
+
+			fmt.Println("欸這一區有新的飲料店，已經新增了喔", handcupInfoCreated)
 			latestHisReqID := HistoryRequest.FindLatestHisReqID(server.DB)
 			HistoryRequest.InitData(latestHisReqID, g.GroupId, handcupInfoCreated.ID, r.Radius)
 			// 將 Google API 的資料存入 DB [history_requests]
 			HistoryRequest.SaveHistoryReq(server.DB)
-			parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, handcupInfoCreated.GoogleId))
-			// responses.JSON(parms.w, http.StatusOK, handcupInfoCreated)
-			responses.JSON(parms.w, http.StatusCreated, handcupInfoCreated)
 		}
 	}
+
+	// parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI))
+	responses.JSON(parms.w, http.StatusCreated, respDataList)
 }
 
 func (server *Server) handleHistoryReq(parms saveResultsParms) {
 	handcupInfo := models.HandcupInfo{}
 	var timeIsExpire bool = false
 	_ = timeIsExpire
+	respDataList := []models.HandcupRespData{}
 
 	for _, h := range parms.handcupIdResponse {
 		thresholdTime := h.UpdateTime.AddDate(0, 0, 7) // Add 7 days
@@ -281,13 +291,12 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 			fmt.Println("Handcup ID:", h.HandcupId)
 			fmt.Println("Updata time:", h.UpdateTime)
 			resp, err := handcupInfo.FindHandcupInfoByID(server.DB, h.HandcupId) // Get handcup infomation by handcup_id
-
 			if err != nil {
 				fmt.Println("為甚麼會錯:", err)
 			}
+
 			fmt.Println("飲料店資料抓到你啦:", resp)
-			parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI, resp.GoogleId))
-			responses.JSON(parms.w, http.StatusOK, resp)
+			respDataList = append(respDataList, resp) // 把資料塞進 respDataList 中
 		}
 	}
 
@@ -296,6 +305,9 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 		t := handleUpdateMapParms{r: parms.r, w: parms.w, groupId: parms.handcupIdResponse[0].GroupId}
 		server.handleUpdateGoogleMap(t) // Call handleUpdateGoogleMap func
 	}
+
+	// parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI))
+	responses.JSON(parms.w, http.StatusOK, respDataList)
 }
 
 func (server *Server) requestPhoto(ref string) string {
