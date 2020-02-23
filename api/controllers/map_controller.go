@@ -150,7 +150,7 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 		HistoryRequest.SaveHistoryReq(server.DB)
 	}
 
-	// parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI))
+	parms.w.Header().Set("Access-Control-Allow-Origin", "*")
 	responses.JSON(parms.w, http.StatusCreated, respDataList)
 }
 
@@ -243,7 +243,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 		}
 	}
 
-	// parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI))
+	parms.w.Header().Set("Access-Control-Allow-Origin", "*")
 	responses.JSON(parms.w, http.StatusCreated, respDataList)
 }
 
@@ -279,7 +279,7 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 		server.handleUpdateGoogleMap(t) // Call handleUpdateGoogleMap func
 	}
 
-	// parms.w.Header().Set("Location", fmt.Sprintf("%s%s/%s\n", parms.r.Host, parms.r.RequestURI))
+	parms.w.Header().Set("Access-Control-Allow-Origin", "*")
 	responses.JSON(parms.w, http.StatusOK, respDataList)
 }
 
