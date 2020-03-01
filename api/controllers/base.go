@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -39,7 +40,12 @@ func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, D
 	server.initializeRoutes()
 }
 
-func (server *Server) Run(addr string) {
-	fmt.Println("Listening to port 5487")
-	log.Fatal(http.ListenAndServe(addr, server.Router))
+func (server *Server) Run() {
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		panic(err)
+	}
+	port := string(listener.Addr().(*net.TCPAddr).Port)
+	fmt.Println("Using port:", port)
+	log.Fatal(http.ListenAndServe(port, server.Router))
 }

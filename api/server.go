@@ -26,5 +26,5 @@ func Run() {
 
 	// seed.Load(server.DB)
 
-	server.Run(":5487")
+	server.Run()
 }
