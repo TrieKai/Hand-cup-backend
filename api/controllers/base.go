@@ -3,8 +3,8 @@ package controllers
 import (
 	"fmt"
 	"log"
-	"net"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
@@ -41,11 +41,10 @@ func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, D
 }
 
 func (server *Server) Run() {
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		panic(err)
+	port := "5487"
+	if v := os.Getenv("PORT"); len(v) > 0 {
+		port = v
 	}
-	port := string(listener.Addr().(*net.TCPAddr).Port)
 	fmt.Println("Using port:", port)
-	log.Fatal(http.ListenAndServe(port, server.Router))
+	log.Fatal(http.ListenAndServe(":"+port, server.Router))
 }
