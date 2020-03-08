@@ -41,10 +41,10 @@ func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, D
 }
 
 func (server *Server) Run() {
-	port := "5487"
-	if v := os.Getenv("PORT"); len(v) > 0 {
-		port = v
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "5000"
 	}
 	fmt.Println("Using port:", port)
-	log.Fatal(http.ListenAndServe(":"+port, server.Router))
+	log.Fatal(http.ListenAndServe("", server.Router))
 }

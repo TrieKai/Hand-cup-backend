@@ -15,7 +15,7 @@ github.com/jinzhu/gorm/dialects/mysql
 github.com/jinzhu/inflection
 # github.com/joho/godotenv v1.3.0
 github.com/joho/godotenv
-# golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
+# golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 # golang.org/x/time v0.0.0-20191024005414-555d28b269f0
