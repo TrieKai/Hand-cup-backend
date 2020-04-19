@@ -49,6 +49,17 @@ type fakeCoordinate struct {
 }
 
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
+	// setupResponse(&w, r)
+	if r.Method == "OPTIONS" {
+		fmt.Println("OPTIONS!!")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, PATCH, OPTIONS, GET, PUT, DELETE")
+		responses.JSON(w, http.StatusOK, "success")
+		return
+	}
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
@@ -342,4 +353,10 @@ func (server *Server) loadGoogleKey() (string, error) {
 	}
 
 	return os.Getenv("GOOGLE_MAP_API_KEY"), nil
+}
+
+func setupResponse(w *http.ResponseWriter, req *http.Request) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
