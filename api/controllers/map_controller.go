@@ -21,6 +21,7 @@ import (
 type handleMapParms struct {
 	nextToken string
 	location  maps.LatLng
+	distance  uint
 	w         http.ResponseWriter
 	r         *http.Request
 }
@@ -41,6 +42,7 @@ type saveResultsParms struct {
 type reqData struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
+	Distance  uint    `json:"distance"`
 }
 
 type fakeCoordinate struct {
@@ -49,13 +51,14 @@ type fakeCoordinate struct {
 }
 
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
-	// setupResponse(&w, r)
 	if r.Method == "OPTIONS" {
-		fmt.Println("OPTIONS!!")
+		fmt.Println("OPTIONS")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, PATCH, OPTIONS, GET, PUT, DELETE")
+		w.Header().Set("Access-Control-Expose-Headers", "*")
 		responses.JSON(w, http.StatusOK, "success")
 		return
 	}
@@ -87,6 +90,8 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 		handleMapParms := handleMapParms{w: w, r: r}
 		handleMapParms.location.Lat = reqData.Latitude
 		handleMapParms.location.Lng = reqData.Longitude
+		handleMapParms.distance = 500 // !?暫定500m
+		// handleMapParms.distance = reqData.Distance
 		server.handleGoogleMap(handleMapParms)
 	} else {
 		// 如果 HistoryRequest 內有紀錄
@@ -107,7 +112,7 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 
 	r := &maps.NearbySearchRequest{
 		Location: &maps.LatLng{Lat: parms.location.Lat, Lng: parms.location.Lng},
-		Radius:   10,
+		Radius:   parms.distance,
 		Keyword:  "飲料店",
 	}
 	if len(parms.nextToken) != 0 {
@@ -184,7 +189,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	fmt.Println("重新要一次GOOGLE API! 緯度:", g.ReqLongitude)
 	r := &maps.NearbySearchRequest{
 		Location: &maps.LatLng{Lat: g.ReqLatitude, Lng: g.ReqLongitude},
-		Radius:   10,
+		Radius:   g.ReqDistance,
 		Keyword:  "飲料店",
 	}
 	if len(parms.nextToken) != 0 {
@@ -353,10 +358,4 @@ func (server *Server) loadGoogleKey() (string, error) {
 	}
 
 	return os.Getenv("GOOGLE_MAP_API_KEY"), nil
-}
-
-func setupResponse(w *http.ResponseWriter, req *http.Request) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }

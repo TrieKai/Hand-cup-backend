@@ -25,6 +25,7 @@ type CheckHRResponse struct {
 	GroupId      uint32    `grom:"not null;" json:"group_id"`
 	ReqLatitude  float64   `grom:"not null;" json:"req_latitude"`
 	ReqLongitude float64   `grom:"not null;" json:"req_longitude"`
+	ReqDistance  uint      `grom:"not null;" json:"distance"`
 	UpdateTime   time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 
@@ -67,6 +68,7 @@ func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) ([]HandcupIdResponse, erro
 	var err error
 	var respData []CheckHRResponse
 	var resp []HandcupIdResponse
+	// 計算半徑約100公尺內
 	maxLat := h.ReqLatitude + 0.0009
 	minLat := h.ReqLatitude - 0.0009
 	maxLng := h.ReqLongitude + 0.0009
@@ -74,7 +76,7 @@ func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) ([]HandcupIdResponse, erro
 
 	db.
 		Table("history_requests").
-		Select("group_id, req_latitude, req_longitude, update_time").
+		Select("group_id, req_latitude, req_longitude, distance, update_time").
 		Where("(req_latitude BETWEEN ? AND ?) AND (req_longitude BETWEEN ? AND ?)", minLat, maxLat, minLng, maxLng).
 		Group("group_id").
 		Find(&respData)
@@ -134,10 +136,9 @@ func (h *HistoryRequest) SaveHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
 
 func (h *HistoryRequest) GetGroupHisReqByGId(db *gorm.DB, groupId uint32) CheckHRResponse {
 	var respData CheckHRResponse
-
 	db.
 		Table("history_requests").
-		Select("group_id, req_latitude, req_longitude").
+		Select("group_id, req_latitude, req_longitude, distance").
 		Where("group_id = ?", groupId).
 		First(&respData)
 

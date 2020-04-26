@@ -8,7 +8,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
-
 	_ "github.com/jinzhu/gorm/dialects/mysql" //mysql database driver
 
 	"handCup-project-backend/api/models"
@@ -33,7 +32,7 @@ func (server *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, D
 		fmt.Printf("We are connected to the %s database", Dbdriver)
 	}
 
-	server.DB.Debug().AutoMigrate(&models.User{}, &models.Post{}) //database migration
+	server.DB.Debug().AutoMigrate(&models.User{}, &models.Post{}) // database migration
 
 	server.Router = mux.NewRouter()
 
@@ -46,5 +45,6 @@ func (server *Server) Run() {
 		port = "3000"
 	}
 	fmt.Println("Using port:", port)
+
 	log.Fatal(http.ListenAndServe(":"+port, server.Router))
 }

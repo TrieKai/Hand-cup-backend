@@ -6,10 +6,20 @@ import (
 	"net/http"
 )
 
+type Response struct {
+	header struct {
+		status int
+	}
+	body interface{}
+}
+
 func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.WriteHeader(statusCode)
 	fmt.Println("抓到JSON囉:", data)
-	err := json.NewEncoder(w).Encode(data)
+	respData := &Response{}
+	respData.header.status = statusCode
+	respData.body = data
+	err := json.NewEncoder(w).Encode(respData)
 	if err != nil {
 		fmt.Fprintf(w, "%s", err.Error())
 	}
