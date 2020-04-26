@@ -17,6 +17,7 @@ type HandcupInfo struct {
 	Longitude      float64   `json:"longitude"`
 	Rating         float32   `json:"rating"`
 	RatingsTotal   int       `json:"ratings_total"`
+	Views          int       `json:"views"`
 	ImageReference string    `json:"image_reference"`
 	ImageWidth     int       `json:"image_width"`
 	ImageHeight    int       `json:"image_height"`
@@ -32,6 +33,7 @@ type HandcupRespData struct {
 	Longitude    float64 `json:"longitude"`
 	Rating       float32 `json:"rating"`
 	RatingsTotal int     `json:"ratings_total"`
+	Views        int     `json:"views"`
 	ImageUrl     string  `json:"image_url"`
 }
 
@@ -72,6 +74,7 @@ func (h *HandcupInfo) FindAllHandcupInfo(db *gorm.DB) (*[]HandcupInfo, error) {
 func (h *HandcupInfo) FindHandcupInfoByID(db *gorm.DB, hid uint32) (HandcupRespData, error) {
 	var err error
 	handcupInfo := HandcupRespData{}
+	db.Model(&HandcupInfo{}).Where("id = ?", hid).Take(&HandcupInfo{}).UpdateColumn("views", gorm.Expr("views + ?", 1)) // Add 1 view
 	err = db.Debug().Table("handcup_infos").Where("id = ?", hid).Find(&handcupInfo).Error
 	if err != nil {
 		return handcupInfo, err
@@ -106,6 +109,7 @@ func (h *HandcupInfo) UpdateAHandcupInfo(db *gorm.DB, hid uint32) (*HandcupInfo,
 			"latitude":        h.Latitude,
 			"longitude":       h.Longitude,
 			"rating":          h.Rating,
+			"views":           h.Views,
 			"image_reference": h.ImageReference,
 			"image_width":     h.ImageWidth,
 			"image_height":    h.ImageHeight,

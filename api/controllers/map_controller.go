@@ -149,6 +149,7 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 			Rating:       handcupInfo.Rating,
 			RatingsTotal: handcupInfo.RatingsTotal,
 			ImageUrl:     handcupInfo.ImageUrl,
+			Views:        1,
 		}
 		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
 
@@ -308,6 +309,7 @@ func (server *Server) handleHandcupInfoData(s maps.PlacesSearchResult) models.Ha
 		Longitude:    s.Geometry.Location.Lng,
 		Rating:       s.Rating,
 		RatingsTotal: s.UserRatingsTotal,
+		Views:        1, // 起始值
 	}
 
 	if s.Photos != nil {
