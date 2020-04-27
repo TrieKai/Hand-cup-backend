@@ -50,6 +50,8 @@ type fakeCoordinate struct {
 	lng float64
 }
 
+var respDataList = []models.HandcupRespData{} // 要回傳的總資料群
+
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
 		fmt.Println("OPTIONS")
@@ -110,28 +112,27 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 		log.Fatalf("Connect client fatal error: %s", err)
 	}
 
+	location := &maps.LatLng{Lat: parms.location.Lat, Lng: parms.location.Lng}
+	distance := parms.distance
 	r := &maps.NearbySearchRequest{
-		Location: &maps.LatLng{Lat: parms.location.Lat, Lng: parms.location.Lng},
-		Radius:   parms.distance,
+		Location: location,
+		Radius:   distance,
 		Keyword:  "飲料店",
 	}
+	// fmt.Println(parms.location.Lat, parms.location.Lng, parms.distance)
 	if len(parms.nextToken) != 0 {
 		r.PageToken = parms.nextToken
 	}
 	// Call Google map API
 	resp, err := c.NearbySearch(context.Background(), r)
+	// fmt.Println(resp)
 	if err != nil {
 		log.Fatalf("Request nearby search fatal error: %s", err)
 	}
 
-	// Recall next page with nextToken
-	if resp.NextPageToken != "" {
-		server.handleGoogleMap(handleMapParms{nextToken: resp.NextPageToken})
-	}
-
 	handcupInfo := models.HandcupInfo{}
 	HistoryRequest := models.HistoryRequest{}
-	respDataList := []models.HandcupRespData{}
+	// respDataList := []models.HandcupRespData{}
 	HistoryRequest.ReqLatitude = parms.location.Lat
 	HistoryRequest.ReqLongitude = parms.location.Lng
 	latestGroupID := HistoryRequest.FindLatestGroupID(server.DB)
@@ -167,7 +168,12 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 		HistoryRequest.SaveHistoryReq(server.DB)
 	}
 
-	parms.w.Header().Set("Access-Control-Allow-Origin", "*")
+	// Recall next page with nextToken
+	if resp.NextPageToken != "" {
+		server.handleGoogleMap(handleMapParms{location: *location, distance: distance, nextToken: resp.NextPageToken})
+	}
+
+	// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
 	responses.JSON(parms.w, http.StatusCreated, respDataList)
 }
 
@@ -201,12 +207,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 		log.Fatalf("Request nearby search fatal error: %s", err)
 	}
 
-	// Recall next page with nextToken
-	if resp.NextPageToken != "" {
-		server.handleUpdateGoogleMap(handleUpdateMapParms{nextToken: resp.NextPageToken})
-	}
-
-	respDataList := []models.HandcupRespData{}
+	// respDataList := []models.HandcupRespData{}
 
 	for _, s := range resp.Results {
 		h, err := handcupInfo.FindHandcupInfoByPlaceID(server.DB, s.PlaceID)
@@ -260,7 +261,12 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 		}
 	}
 
-	parms.w.Header().Set("Access-Control-Allow-Origin", "*")
+	// Recall next page with nextToken
+	if resp.NextPageToken != "" {
+		server.handleUpdateGoogleMap(handleUpdateMapParms{nextToken: resp.NextPageToken})
+	}
+
+	// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
 	responses.JSON(parms.w, http.StatusCreated, respDataList)
 }
 
@@ -268,7 +274,7 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 	handcupInfo := models.HandcupInfo{}
 	var timeIsExpire bool = false
 	_ = timeIsExpire
-	respDataList := []models.HandcupRespData{}
+	// respDataList := []models.HandcupRespData{}
 
 	for _, h := range parms.handcupIdResponse {
 		thresholdTime := h.UpdateTime.AddDate(0, 0, 7) // Add 7 days
@@ -296,7 +302,7 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 		server.handleUpdateGoogleMap(t) // Call handleUpdateGoogleMap func
 	}
 
-	parms.w.Header().Set("Access-Control-Allow-Origin", "*")
+	// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
 	responses.JSON(parms.w, http.StatusOK, respDataList)
 }
 
