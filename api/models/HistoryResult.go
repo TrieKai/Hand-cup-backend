@@ -25,7 +25,7 @@ type CheckHRResponse struct {
 	GroupId      uint32    `grom:"not null;" json:"group_id"`
 	ReqLatitude  float64   `grom:"not null;" json:"req_latitude"`
 	ReqLongitude float64   `grom:"not null;" json:"req_longitude"`
-	ReqDistance  uint      `grom:"not null;" json:"distance"`
+	Distance     uint      `grom:"not null;" json:"distance"`
 	UpdateTime   time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"update_time"`
 }
 

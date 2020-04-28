@@ -80,6 +80,7 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	HistoryRequest := models.HistoryRequest{}
 	HistoryRequest.ReqLatitude = reqData.Latitude
 	HistoryRequest.ReqLongitude = reqData.Longitude
+	HistoryRequest.Distance = reqData.Distance
 
 	hisReqResp, err := HistoryRequest.CheckHistoryReq(server.DB)
 	if err != nil {
@@ -92,7 +93,7 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 		handleMapParms := handleMapParms{w: w, r: r}
 		handleMapParms.location.Lat = reqData.Latitude
 		handleMapParms.location.Lng = reqData.Longitude
-		handleMapParms.distance = 500 // !?暫定500m
+		handleMapParms.distance = 300 // !?暫定500m
 		// handleMapParms.distance = reqData.Distance
 		server.handleGoogleMap(handleMapParms)
 	} else {
@@ -196,7 +197,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	fmt.Println("重新要一次GOOGLE API! 緯度:", g.ReqLongitude)
 	r := &maps.NearbySearchRequest{
 		Location: &maps.LatLng{Lat: g.ReqLatitude, Lng: g.ReqLongitude},
-		Radius:   g.ReqDistance,
+		Radius:   g.Distance,
 		Keyword:  "飲料店",
 	}
 	if len(parms.nextToken) != 0 {
