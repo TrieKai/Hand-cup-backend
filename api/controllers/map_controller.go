@@ -28,6 +28,7 @@ type handleMapParms struct {
 
 type handleUpdateMapParms struct {
 	nextToken string
+	location  maps.LatLng
 	w         http.ResponseWriter
 	r         *http.Request
 	groupId   uint32
@@ -36,6 +37,7 @@ type handleUpdateMapParms struct {
 type saveResultsParms struct {
 	w                 http.ResponseWriter
 	r                 *http.Request
+	location          maps.LatLng
 	handcupIdResponse []models.HandcupIdResponse
 }
 
@@ -98,7 +100,7 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 		server.handleGoogleMap(handleMapParms)
 	} else {
 		// 如果 HistoryRequest 內有紀錄
-		server.handleHistoryReq(saveResultsParms{w: w, r: r, handcupIdResponse: hisReqResp})
+		server.handleHistoryReq(saveResultsParms{w: w, r: r, location: maps.LatLng{Lat: reqData.Latitude, Lng: reqData.Longitude}, handcupIdResponse: hisReqResp})
 	}
 }
 
@@ -211,11 +213,6 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	// respDataList := []models.HandcupRespData{}
 
 	for _, s := range resp.Results {
-		h, err := handcupInfo.FindHandcupInfoByPlaceID(server.DB, s.PlaceID)
-		if err != nil {
-			log.Fatal(err)
-		}
-
 		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
 
 		// 處理要回傳給前端的資料
@@ -230,6 +227,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 		}
 		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
 
+		h, _ := handcupInfo.FindHandcupInfoByPlaceID(server.DB, s.PlaceID)
 		// 如果資料庫內有這筆資訊
 		if h.ID != 0 {
 			handcupInfo.ID = h.ID
@@ -255,6 +253,8 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 			}
 
 			fmt.Println("欸這一區有新的飲料店，已經新增了喔", handcupInfoCreated)
+			HistoryRequest.ReqLatitude = parms.location.Lat  // 請求的緯度
+			HistoryRequest.ReqLongitude = parms.location.Lng // 請求的經度
 			latestHisReqID := HistoryRequest.FindLatestHisReqID(server.DB)
 			HistoryRequest.InitData(latestHisReqID, g.GroupId, handcupInfoCreated.ID, r.Radius, r.Keyword)
 			// 將 Google API 的資料存入 DB [history_requests]
@@ -299,7 +299,7 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 
 	// 如果資料過期
 	if timeIsExpire {
-		t := handleUpdateMapParms{r: parms.r, w: parms.w, groupId: parms.handcupIdResponse[0].GroupId}
+		t := handleUpdateMapParms{location: parms.location, r: parms.r, w: parms.w, groupId: parms.handcupIdResponse[0].GroupId}
 		server.handleUpdateGoogleMap(t) // Call handleUpdateGoogleMap func
 	}
 
