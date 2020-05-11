@@ -19,19 +19,21 @@ import (
 )
 
 type handleMapParms struct {
-	nextToken string
-	location  maps.LatLng
-	distance  uint
-	w         http.ResponseWriter
-	r         *http.Request
+	nextToken    string
+	location     maps.LatLng
+	distance     uint
+	w            http.ResponseWriter
+	r            *http.Request
+	respDataList []models.HandcupRespData
 }
 
 type handleUpdateMapParms struct {
-	nextToken string
-	location  maps.LatLng
-	w         http.ResponseWriter
-	r         *http.Request
-	groupId   uint32
+	nextToken    string
+	location     maps.LatLng
+	w            http.ResponseWriter
+	r            *http.Request
+	groupId      uint32
+	respDataList []models.HandcupRespData
 }
 
 type saveResultsParms struct {
@@ -39,6 +41,7 @@ type saveResultsParms struct {
 	r                 *http.Request
 	location          maps.LatLng
 	handcupIdResponse []models.HandcupIdResponse
+	respDataList      []models.HandcupRespData
 }
 
 type reqData struct {
@@ -52,17 +55,17 @@ type fakeCoordinate struct {
 	lng float64
 }
 
-var respDataList = []models.HandcupRespData{} // 要回傳的總資料群
+// var respDataList = []models.HandcupRespData{} // 要回傳的總資料群
 
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Expose-Headers", "*")
 	if r.Method == "OPTIONS" {
 		fmt.Println("OPTIONS")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Expose-Headers", "*")
 		responses.JSON(w, http.StatusOK, "success")
 		return
 	}
@@ -135,10 +138,15 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 
 	handcupInfo := models.HandcupInfo{}
 	HistoryRequest := models.HistoryRequest{}
-	// respDataList := []models.HandcupRespData{}
+	respDataList := []models.HandcupRespData{}
 	HistoryRequest.ReqLatitude = parms.location.Lat
 	HistoryRequest.ReqLongitude = parms.location.Lng
 	latestGroupID := HistoryRequest.FindLatestGroupID(server.DB)
+
+	// 如果有值就傳承下去
+	if len(parms.respDataList) != 0 {
+		respDataList = parms.respDataList
+	}
 
 	for _, s := range resp.Results {
 		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
@@ -173,7 +181,7 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 
 	// Recall next page with nextToken
 	if resp.NextPageToken != "" {
-		server.handleGoogleMap(handleMapParms{location: *location, distance: distance, nextToken: resp.NextPageToken})
+		server.handleGoogleMap(handleMapParms{location: *location, distance: distance, nextToken: resp.NextPageToken, respDataList: respDataList})
 	}
 
 	// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -210,7 +218,12 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 		log.Fatalf("Request nearby search fatal error: %s", err)
 	}
 
-	// respDataList := []models.HandcupRespData{}
+	respDataList := []models.HandcupRespData{}
+
+	// 如果有值就傳承下去
+	if len(parms.respDataList) != 0 {
+		respDataList = parms.respDataList
+	}
 
 	for _, s := range resp.Results {
 		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
@@ -264,7 +277,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 
 	// Recall next page with nextToken
 	if resp.NextPageToken != "" {
-		server.handleUpdateGoogleMap(handleUpdateMapParms{nextToken: resp.NextPageToken})
+		server.handleUpdateGoogleMap(handleUpdateMapParms{nextToken: resp.NextPageToken, groupId: parms.groupId, respDataList: respDataList})
 	}
 
 	// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -275,7 +288,12 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 	handcupInfo := models.HandcupInfo{}
 	var timeIsExpire bool = false
 	_ = timeIsExpire
-	// respDataList := []models.HandcupRespData{}
+	respDataList := []models.HandcupRespData{}
+
+	// 如果有值就傳承下去
+	if len(parms.respDataList) != 0 {
+		respDataList = parms.respDataList
+	}
 
 	for _, h := range parms.handcupIdResponse {
 		thresholdTime := h.UpdateTime.AddDate(0, 0, 7) // Add 7 days
@@ -299,7 +317,7 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 
 	// 如果資料過期
 	if timeIsExpire {
-		t := handleUpdateMapParms{location: parms.location, r: parms.r, w: parms.w, groupId: parms.handcupIdResponse[0].GroupId}
+		t := handleUpdateMapParms{location: parms.location, r: parms.r, w: parms.w, groupId: parms.handcupIdResponse[0].GroupId, respDataList: respDataList}
 		server.handleUpdateGoogleMap(t) // Call handleUpdateGoogleMap func
 	}
 
