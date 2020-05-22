@@ -58,7 +58,7 @@ type fakeCoordinate struct {
 // var respDataList = []models.HandcupRespData{} // 要回傳的總資料群
 
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
@@ -182,10 +182,10 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 	// Recall next page with nextToken
 	if resp.NextPageToken != "" {
 		server.handleGoogleMap(handleMapParms{location: *location, distance: distance, nextToken: resp.NextPageToken, respDataList: respDataList})
+	} else {
+		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
+		responses.JSON(parms.w, http.StatusCreated, respDataList)
 	}
-
-	// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-	responses.JSON(parms.w, http.StatusCreated, respDataList)
 }
 
 func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
@@ -278,10 +278,10 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	// Recall next page with nextToken
 	if resp.NextPageToken != "" {
 		server.handleUpdateGoogleMap(handleUpdateMapParms{nextToken: resp.NextPageToken, groupId: parms.groupId, respDataList: respDataList})
+	} else {
+		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
+		responses.JSON(parms.w, http.StatusCreated, respDataList)
 	}
-
-	// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-	responses.JSON(parms.w, http.StatusCreated, respDataList)
 }
 
 func (server *Server) handleHistoryReq(parms saveResultsParms) {
@@ -317,12 +317,12 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 
 	// 如果資料過期
 	if timeIsExpire {
-		t := handleUpdateMapParms{location: parms.location, r: parms.r, w: parms.w, groupId: parms.handcupIdResponse[0].GroupId, respDataList: respDataList}
+		t := handleUpdateMapParms{location: parms.location, r: parms.r, w: parms.w, groupId: parms.handcupIdResponse[0].GroupId}
 		server.handleUpdateGoogleMap(t) // Call handleUpdateGoogleMap func
+	} else {
+		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
+		responses.JSON(parms.w, http.StatusOK, respDataList)
 	}
-
-	// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-	responses.JSON(parms.w, http.StatusOK, respDataList)
 }
 
 func (server *Server) handleHandcupInfoData(s maps.PlacesSearchResult) models.HandcupInfo {
