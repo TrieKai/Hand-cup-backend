@@ -81,7 +81,7 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	fmt.Println("Requset body 內容:", reqData)
-	//24.9927061, 121.4491151 24.9888971, 121.4481381
+	// 24.9927061, 121.4491151 24.9888971, 121.4481381
 	HistoryRequest := models.HistoryRequest{}
 	HistoryRequest.ReqLatitude = reqData.Latitude
 	HistoryRequest.ReqLongitude = reqData.Longitude

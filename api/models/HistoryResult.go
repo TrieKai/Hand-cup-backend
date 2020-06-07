@@ -69,10 +69,10 @@ func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) ([]HandcupIdResponse, erro
 	var respData []CheckHRResponse
 	var resp []HandcupIdResponse
 	// 計算半徑約100公尺內
-	maxLat := h.ReqLatitude + 0.0009
-	minLat := h.ReqLatitude - 0.0009
-	maxLng := h.ReqLongitude + 0.0009
-	minLng := h.ReqLongitude - 0.0009
+	maxLat := h.ReqLatitude + 0.00045
+	minLat := h.ReqLatitude - 0.00045
+	maxLng := h.ReqLongitude + 0.00045
+	minLng := h.ReqLongitude - 0.00045
 
 	db.
 		Table("history_requests").
