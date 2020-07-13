@@ -161,7 +161,13 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 			Rating:       handcupInfo.Rating,
 			RatingsTotal: handcupInfo.RatingsTotal,
 			ImageUrl:     handcupInfo.ImageUrl,
-			Views:        1,
+		}
+		// 先去搜尋 DB 內有無飲料店資料，並取出 views 回傳
+		FHIBPResp, FHIBPError := handcupInfo.FindHandcupInfoByPlaceID(server.DB, handcupInfo.PlaceId)
+		if FHIBPError != nil {
+			respData.Views = 1
+		} else {
+			respData.Views = FHIBPResp.Views + 1
 		}
 		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
 

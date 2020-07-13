@@ -56,6 +56,8 @@ func (h *HandcupInfo) SaveHandcupInfo(db *gorm.DB) (*HandcupInfo, error) {
 		if err != nil {
 			return &HandcupInfo{}, err
 		}
+	} else {
+		db.Model(&HandcupInfo{}).Where("place_id = ?", h.PlaceId).Take(&HandcupInfo{}).UpdateColumn("views", gorm.Expr("views + ?", 1)) // Add 1 view
 	}
 	// fmt.Print(h)
 	return h, nil
@@ -96,6 +98,7 @@ func (h *HandcupInfo) FindHandcupInfoByPlaceID(db *gorm.DB, pid string) (Handcup
 	if gorm.IsRecordNotFoundError(err) {
 		return handcupInfo, errors.New("HandcupInfo Not Found")
 	}
+	db.Model(&HandcupInfo{}).Where("place_id = ?", pid).Take(&HandcupInfo{}).UpdateColumn("views", gorm.Expr("views + ?", 1)) // Add 1 view
 
 	return handcupInfo, err
 }
