@@ -149,7 +149,11 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 	}
 
 	for _, s := range resp.Results {
-		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
+		d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: s.PlaceID})
+		if err != nil {
+			println(err)
+		}
+		handcupInfo = server.handleHandcupInfoData(s, d) // 將 Google map API 的值塞入 handcupInfo 中
 		handcupInfo.ID = handcupInfo.FindLatestID(server.DB) + 1
 
 		// 處理要回傳給前端的資料
@@ -232,7 +236,11 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	}
 
 	for _, s := range resp.Results {
-		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
+		d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: s.PlaceID})
+		if err != nil {
+			println(err)
+		}
+		handcupInfo = server.handleHandcupInfoData(s, d) // 將 Google map API 的值塞入 handcupInfo 中
 
 		// 處理要回傳給前端的資料
 		respData := models.HandcupRespData{
@@ -243,6 +251,8 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 			Rating:       handcupInfo.Rating,
 			RatingsTotal: handcupInfo.RatingsTotal,
 			ImageUrl:     handcupInfo.ImageUrl,
+			Price_level:  d.PriceLevel,
+			Reviews:      d.Reviews,
 		}
 		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
 
@@ -331,7 +341,7 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 	}
 }
 
-func (server *Server) handleHandcupInfoData(s maps.PlacesSearchResult) models.HandcupInfo {
+func (server *Server) handleHandcupInfoData(s maps.PlacesSearchResult, d maps.PlaceDetailsResult) models.HandcupInfo {
 	handcupInfo := models.HandcupInfo{
 		GoogleId:     s.ID,
 		PlaceId:      s.PlaceID,
