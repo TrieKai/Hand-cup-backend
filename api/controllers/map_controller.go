@@ -149,11 +149,12 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 	}
 
 	for _, s := range resp.Results {
-		d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: s.PlaceID})
-		if err != nil {
-			println(err)
-		}
-		handcupInfo = server.handleHandcupInfoData(s, d) // 將 Google map API 的值塞入 handcupInfo 中
+		// d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: s.PlaceID})
+		// if err != nil {
+		// 	println(err)
+		// }
+		fmt.Println("嗚嗚嗚嗚嗚嗚CC", s.ID, s.AltIDs)
+		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
 		handcupInfo.ID = handcupInfo.FindLatestID(server.DB) + 1
 
 		// 處理要回傳給前端的資料
@@ -165,6 +166,10 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 			Rating:       handcupInfo.Rating,
 			RatingsTotal: handcupInfo.RatingsTotal,
 			ImageUrl:     handcupInfo.ImageUrl,
+			// Price_level:   d.PriceLevel,
+			// Reviews:       d.Reviews,
+			// Website:       d.Website,
+			// Opening_hours: *d.OpeningHours,
 		}
 		// 先去搜尋 DB 內有無飲料店資料，並取出 views 回傳
 		FHIBPResp, FHIBPError := handcupInfo.FindHandcupInfoByPlaceID(server.DB, handcupInfo.PlaceId)
@@ -194,7 +199,7 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 		server.handleGoogleMap(handleMapParms{location: *location, distance: distance, nextToken: resp.NextPageToken, respDataList: respDataList})
 	} else {
 		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-		responses.JSON(parms.w, http.StatusCreated, respDataList)
+		server.handleResponses(parms.w, http.StatusCreated, respDataList)
 	}
 }
 
@@ -236,12 +241,13 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	}
 
 	for _, s := range resp.Results {
-		d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: s.PlaceID})
-		if err != nil {
-			println(err)
-		}
-		handcupInfo = server.handleHandcupInfoData(s, d) // 將 Google map API 的值塞入 handcupInfo 中
-
+		// d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: s.PlaceID})
+		// if err != nil {
+		// 	println(err)
+		// }
+		fmt.Println("嗚嗚嗚嗚嗚嗚AA", s.ID, s.AltIDs)
+		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
+		fmt.Println("嗚嗚嗚嗚嗚嗚BB", handcupInfo)
 		// 處理要回傳給前端的資料
 		respData := models.HandcupRespData{
 			PlaceId:      handcupInfo.PlaceId,
@@ -251,8 +257,10 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 			Rating:       handcupInfo.Rating,
 			RatingsTotal: handcupInfo.RatingsTotal,
 			ImageUrl:     handcupInfo.ImageUrl,
-			Price_level:  d.PriceLevel,
-			Reviews:      d.Reviews,
+			// Price_level:   d.PriceLevel,
+			// Reviews:       d.Reviews,
+			// Website:       d.Website,
+			// Opening_hours: *d.OpeningHours,
 		}
 		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
 
@@ -296,7 +304,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 		server.handleUpdateGoogleMap(handleUpdateMapParms{nextToken: resp.NextPageToken, groupId: parms.groupId, respDataList: respDataList})
 	} else {
 		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-		responses.JSON(parms.w, http.StatusCreated, respDataList)
+		server.handleResponses(parms.w, http.StatusCreated, respDataList)
 	}
 }
 
@@ -337,11 +345,11 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 		server.handleUpdateGoogleMap(t) // Call handleUpdateGoogleMap func
 	} else {
 		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-		responses.JSON(parms.w, http.StatusOK, respDataList)
+		server.handleResponses(parms.w, http.StatusOK, respDataList)
 	}
 }
 
-func (server *Server) handleHandcupInfoData(s maps.PlacesSearchResult, d maps.PlaceDetailsResult) models.HandcupInfo {
+func (server *Server) handleHandcupInfoData(s maps.PlacesSearchResult) models.HandcupInfo {
 	handcupInfo := models.HandcupInfo{
 		GoogleId:     s.ID,
 		PlaceId:      s.PlaceID,
@@ -401,4 +409,29 @@ func (server *Server) loadGoogleKey() (string, error) {
 	}
 
 	return os.Getenv("GOOGLE_MAP_API_KEY"), nil
+}
+
+func (server *Server) handleResponses(w http.ResponseWriter, statusCode int, resp []models.HandcupRespData) {
+	key, err := server.loadGoogleKey()
+	if err != nil {
+		fmt.Printf("Load API key fatal error: %s", err)
+	}
+	c, err := maps.NewClient(maps.WithAPIKey(key))
+	if err != nil {
+		fmt.Printf("Connect client fatal error: %s", err)
+	}
+
+	for _, r := range resp {
+		d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: r.PlaceId})
+		if err != nil {
+			println(err)
+		}
+		// fmt.Println("嗚嗚嗚嗚嗚嗚DD", d)
+		r.Price_level = d.PriceLevel
+		r.Reviews = d.Reviews
+		// r.Opening_hours = *d.OpeningHours
+	}
+	// TODO: Fix resp nil content
+	fmt.Println("嗚嗚嗚嗚嗚嗚EE", resp)
+	responses.JSON(w, http.StatusOK, resp)
 }
