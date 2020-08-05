@@ -39,7 +39,7 @@ type HandcupRespData struct {
 	Reviews       []maps.PlaceReview `json:"reviews"`
 	Price_level   int                `json:"price_level"`
 	Website       string             `json:"website"`
-	Opening_hours maps.OpeningHours  `json:"ppening_hours"`
+	Opening_hours *maps.OpeningHours `json:"opening_hours"`
 }
 
 func (h *HandcupInfo) FindLatestID(db *gorm.DB) uint32 {

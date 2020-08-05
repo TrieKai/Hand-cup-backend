@@ -421,17 +421,15 @@ func (server *Server) handleResponses(w http.ResponseWriter, statusCode int, res
 		fmt.Printf("Connect client fatal error: %s", err)
 	}
 
-	for _, r := range resp {
+	for i, r := range resp {
 		d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: r.PlaceId})
 		if err != nil {
 			println(err)
 		}
-		// fmt.Println("嗚嗚嗚嗚嗚嗚DD", d)
-		r.Price_level = d.PriceLevel
-		r.Reviews = d.Reviews
-		// r.Opening_hours = *d.OpeningHours
+		resp[i].Price_level = d.PriceLevel
+		resp[i].Reviews = d.Reviews
+		resp[i].Website = d.Website
+		resp[i].Opening_hours = d.OpeningHours
 	}
-	// TODO: Fix resp nil content
-	fmt.Println("嗚嗚嗚嗚嗚嗚EE", resp)
 	responses.JSON(w, http.StatusOK, resp)
 }
