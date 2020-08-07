@@ -119,6 +119,7 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 	}
 
 	location := &maps.LatLng{Lat: parms.location.Lat, Lng: parms.location.Lng}
+	// fmt.Println("一秒過去:", location)
 	distance := parms.distance
 	r := &maps.NearbySearchRequest{
 		Location: location,
@@ -149,11 +150,6 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 	}
 
 	for _, s := range resp.Results {
-		// d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: s.PlaceID})
-		// if err != nil {
-		// 	println(err)
-		// }
-		fmt.Println("嗚嗚嗚嗚嗚嗚CC", s.ID, s.AltIDs)
 		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
 		handcupInfo.ID = handcupInfo.FindLatestID(server.DB) + 1
 
@@ -166,10 +162,6 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 			Rating:       handcupInfo.Rating,
 			RatingsTotal: handcupInfo.RatingsTotal,
 			ImageUrl:     handcupInfo.ImageUrl,
-			// Price_level:   d.PriceLevel,
-			// Reviews:       d.Reviews,
-			// Website:       d.Website,
-			// Opening_hours: *d.OpeningHours,
 		}
 		// 先去搜尋 DB 內有無飲料店資料，並取出 views 回傳
 		FHIBPResp, FHIBPError := handcupInfo.FindHandcupInfoByPlaceID(server.DB, handcupInfo.PlaceId)
@@ -241,13 +233,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	}
 
 	for _, s := range resp.Results {
-		// d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: s.PlaceID})
-		// if err != nil {
-		// 	println(err)
-		// }
-		fmt.Println("嗚嗚嗚嗚嗚嗚AA", s.ID, s.AltIDs)
 		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
-		fmt.Println("嗚嗚嗚嗚嗚嗚BB", handcupInfo)
 		// 處理要回傳給前端的資料
 		respData := models.HandcupRespData{
 			PlaceId:      handcupInfo.PlaceId,
@@ -257,10 +243,6 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 			Rating:       handcupInfo.Rating,
 			RatingsTotal: handcupInfo.RatingsTotal,
 			ImageUrl:     handcupInfo.ImageUrl,
-			// Price_level:   d.PriceLevel,
-			// Reviews:       d.Reviews,
-			// Website:       d.Website,
-			// Opening_hours: *d.OpeningHours,
 		}
 		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
 
