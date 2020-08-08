@@ -65,7 +65,7 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Expose-Headers", "*")
 	if r.Method == "OPTIONS" {
-		fmt.Println("OPTIONS")
+		log.Println("OPTIONS")
 		responses.JSON(w, http.StatusOK, "success")
 		return
 	}
@@ -78,9 +78,9 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	var reqData reqData
 	err = json.Unmarshal(body, &reqData)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("JSON Unmarshal:", err)
 	}
-	fmt.Println("Requset body 內容:", reqData)
+	log.Println("Requset body 內容:", reqData)
 	// 24.9927061, 121.4491151 24.9888971, 121.4481381
 	HistoryRequest := models.HistoryRequest{}
 	HistoryRequest.ReqLatitude = reqData.Latitude
@@ -92,7 +92,7 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	fmt.Println("檢查資料庫歷史紀錄:", hisReqResp)
+	log.Println("檢查資料庫歷史紀錄:", hisReqResp)
 	if len(hisReqResp) == 0 {
 		// 如果 HistoryRequest 內沒有紀錄
 		handleMapParms := handleMapParms{w: w, r: r}
@@ -110,31 +110,30 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 func (server *Server) handleGoogleMap(parms handleMapParms) {
 	key, err := server.loadGoogleKey()
 	if err != nil {
-		log.Fatalf("Load API key fatal error: %s", err)
+		log.Println("Load API key fatal error: %s", err)
 	}
 
 	c, err := maps.NewClient(maps.WithAPIKey(key))
 	if err != nil {
-		log.Fatalf("Connect client fatal error: %s", err)
+		log.Println("Connect client fatal error: %s", err)
 	}
 
 	location := &maps.LatLng{Lat: parms.location.Lat, Lng: parms.location.Lng}
-	// fmt.Println("一秒過去:", location)
 	distance := parms.distance
 	r := &maps.NearbySearchRequest{
 		Location: location,
 		Radius:   distance,
 		Keyword:  "飲料店",
 	}
-	// fmt.Println(parms.location.Lat, parms.location.Lng, parms.distance)
+	// log.Println(parms.location.Lat, parms.location.Lng, parms.distance)
 	if len(parms.nextToken) != 0 {
 		r.PageToken = parms.nextToken
 	}
 	// Call Google map API
 	resp, err := c.NearbySearch(context.Background(), r)
-	// fmt.Println(resp)
+	// log.Println(resp)
 	if err != nil {
-		log.Fatalf("Request nearby search fatal error: %s", err)
+		log.Println("Request nearby search fatal error: %s", err)
 	}
 
 	handcupInfo := models.HandcupInfo{}
@@ -185,13 +184,19 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 		// 將 Google API 的資料存入 DB [history_requests]
 		HistoryRequest.SaveHistoryReq(server.DB)
 	}
-
 	// Recall next page with nextToken
 	if resp.NextPageToken != "" {
-		server.handleGoogleMap(handleMapParms{location: *location, distance: distance, nextToken: resp.NextPageToken, respDataList: respDataList})
+		server.handleGoogleMap(handleMapParms{
+			nextToken:    resp.NextPageToken,
+			location:     *location,
+			distance:     distance,
+			w:            parms.w,
+			r:            parms.r,
+			respDataList: respDataList,
+		})
 	} else {
 		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-		server.handleResponses(parms.w, http.StatusCreated, respDataList)
+		server.handleResponses(parms.w, http.StatusOK, respDataList)
 	}
 }
 
@@ -201,17 +206,16 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 
 	key, err := server.loadGoogleKey()
 	if err != nil {
-		log.Fatalf("Load API key fatal error: %s", err)
+		log.Println("Load API key fatal error: %s", err)
 	}
 
 	c, err := maps.NewClient(maps.WithAPIKey(key))
 	if err != nil {
-		log.Fatalf("Connect client fatal error: %s", err)
+		log.Println("Connect client fatal error: %s", err)
 	}
 
 	g := HistoryRequest.GetGroupHisReqByGId(server.DB, parms.groupId)
-	fmt.Println("重新要一次GOOGLE API! 經度:", g.ReqLatitude)
-	fmt.Println("重新要一次GOOGLE API! 緯度:", g.ReqLongitude)
+	log.Println("重新要一次GOOGLE API! 經度: %v, 緯度: %v", g.ReqLatitude, g.ReqLongitude)
 	r := &maps.NearbySearchRequest{
 		Location: &maps.LatLng{Lat: g.ReqLatitude, Lng: g.ReqLongitude},
 		Radius:   g.Distance,
@@ -222,7 +226,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	}
 	resp, err := c.NearbySearch(context.Background(), r)
 	if err != nil {
-		log.Fatalf("Request nearby search fatal error: %s", err)
+		log.Println("Request nearby search fatal error: %s", err)
 	}
 
 	respDataList := []models.HandcupRespData{}
@@ -257,7 +261,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 				return
 			}
 
-			fmt.Println("我改飲料店資訊了喔", handcupInfoUpdated)
+			log.Println("我改飲料店資訊了喔", handcupInfoUpdated)
 			HistoryRequest.GroupId = g.GroupId
 			HistoryRequest.ID = handcupInfoUpdated.ID
 			HistoryRequest.UpdateAHistoryRequest(server.DB)
@@ -271,7 +275,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 				return
 			}
 
-			fmt.Println("欸這一區有新的飲料店，已經新增了喔", handcupInfoCreated)
+			log.Println("欸這一區有新的飲料店，已經新增了喔", handcupInfoCreated)
 			HistoryRequest.ReqLatitude = parms.location.Lat  // 請求的緯度
 			HistoryRequest.ReqLongitude = parms.location.Lng // 請求的經度
 			latestHisReqID := HistoryRequest.FindLatestHisReqID(server.DB)
@@ -283,10 +287,17 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 
 	// Recall next page with nextToken
 	if resp.NextPageToken != "" {
-		server.handleUpdateGoogleMap(handleUpdateMapParms{nextToken: resp.NextPageToken, groupId: parms.groupId, respDataList: respDataList})
+		server.handleUpdateGoogleMap(handleUpdateMapParms{
+			nextToken:    resp.NextPageToken,
+			location:     parms.location,
+			w:            parms.w,
+			r:            parms.r,
+			groupId:      parms.groupId,
+			respDataList: respDataList,
+		})
 	} else {
 		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-		server.handleResponses(parms.w, http.StatusCreated, respDataList)
+		server.handleResponses(parms.w, http.StatusOK, respDataList)
 	}
 }
 
@@ -305,18 +316,18 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 		thresholdTime := h.UpdateTime.AddDate(0, 0, 7) // Add 7 days
 		// 設定超過七天需要更新資訊
 		if time.Now().After(thresholdTime) {
-			fmt.Println("這筆資料超過七天啦! ID:", h.HandcupId)
+			log.Println("這筆資料超過七天啦! ID:", h.HandcupId)
 			timeIsExpire = true
 		} else {
-			fmt.Println("Group ID:", h.GroupId)
-			fmt.Println("Handcup ID:", h.HandcupId)
-			fmt.Println("Updata time:", h.UpdateTime)
+			log.Println("Group ID:", h.GroupId)
+			log.Println("Handcup ID:", h.HandcupId)
+			log.Println("Updata time:", h.UpdateTime)
 			resp, err := handcupInfo.FindHandcupInfoByID(server.DB, h.HandcupId) // Get handcup infomation by handcup_id
 			if err != nil {
-				fmt.Println("為甚麼會錯:", err)
+				log.Println("為甚麼會錯:", err)
 			}
 
-			fmt.Println("飲料店資料抓到你啦:", resp)
+			// log.Println("飲料店資料抓到你啦:", resp)
 			respDataList = append(respDataList, resp) // 把資料塞進 respDataList 中
 		}
 	}
@@ -364,7 +375,7 @@ func (server *Server) requestPhoto(ref string) string {
 
 	key, err := server.loadGoogleKey()
 	if err != nil {
-		log.Fatalf("Load API key fatal error: %s", err)
+		log.Println("Load API key fatal error: %s", err)
 	}
 
 	maxWidth := 400
@@ -372,12 +383,12 @@ func (server *Server) requestPhoto(ref string) string {
 	requestURL := fmt.Sprintf("%smaxwidth=%d&photoreference=%s&key=%s", requsetBaseURL, maxWidth, ref, key)
 	resp, err := http.Get(requestURL)
 	if err != nil {
-		log.Fatalf("http.Get => %v", err.Error())
+		log.Println("http.Get => %v", err.Error())
 	}
 
 	// The Request in the Response is the last URL the
 	finalURL := resp.Request.URL.String()
-	fmt.Printf("The photo url you ended up at is: %v\n", finalURL)
+	log.Println("The photo url you ended up at is: %v\n", finalURL)
 
 	return finalURL
 }
@@ -386,7 +397,7 @@ func (server *Server) loadGoogleKey() (string, error) {
 	var err error
 	err = godotenv.Load()
 	if err != nil {
-		log.Fatalf("Error getting env, not comming through %v", err)
+		log.Println("Error getting env, not comming through %v", err)
 		return "", errors.New("maps: destination missing")
 	}
 
@@ -396,11 +407,11 @@ func (server *Server) loadGoogleKey() (string, error) {
 func (server *Server) handleResponses(w http.ResponseWriter, statusCode int, resp []models.HandcupRespData) {
 	key, err := server.loadGoogleKey()
 	if err != nil {
-		fmt.Printf("Load API key fatal error: %s", err)
+		log.Println("Load API key fatal error: %s", err)
 	}
 	c, err := maps.NewClient(maps.WithAPIKey(key))
 	if err != nil {
-		fmt.Printf("Connect client fatal error: %s", err)
+		log.Println("Connect client fatal error: %s", err)
 	}
 
 	for i, r := range resp {
@@ -411,7 +422,9 @@ func (server *Server) handleResponses(w http.ResponseWriter, statusCode int, res
 		resp[i].Price_level = d.PriceLevel
 		resp[i].Reviews = d.Reviews
 		resp[i].Website = d.Website
-		resp[i].Opening_hours = d.OpeningHours
+		if d.OpeningHours != nil {
+			resp[i].Opening_hours = d.OpeningHours
+		}
 	}
-	responses.JSON(w, http.StatusOK, resp)
+	responses.JSON(w, statusCode, resp)
 }
