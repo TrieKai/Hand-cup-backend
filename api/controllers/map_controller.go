@@ -98,7 +98,7 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 		handleMapParms := handleMapParms{w: w, r: r}
 		handleMapParms.location.Lat = reqData.Latitude
 		handleMapParms.location.Lng = reqData.Longitude
-		handleMapParms.distance = 300 // !?暫定500m
+		handleMapParms.distance = 300 // !?暫定300m
 		// handleMapParms.distance = reqData.Distance
 		server.handleGoogleMap(handleMapParms)
 	} else {
