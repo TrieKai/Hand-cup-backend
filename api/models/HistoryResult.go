@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -68,11 +67,11 @@ func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) ([]HandcupIdResponse, erro
 	var err error
 	var respData []CheckHRResponse
 	var resp []HandcupIdResponse
-	// 計算半徑約100公尺內
-	maxLat := h.ReqLatitude + 0.00045
-	minLat := h.ReqLatitude - 0.00045
-	maxLng := h.ReqLongitude + 0.00045
-	minLng := h.ReqLongitude - 0.00045
+	// 計算半徑約莫300公尺內
+	maxLat := h.ReqLatitude + 0.00095
+	minLat := h.ReqLatitude - 0.00095
+	maxLng := h.ReqLongitude + 0.00095
+	minLng := h.ReqLongitude - 0.00095
 
 	db.
 		Table("history_requests").
@@ -81,7 +80,7 @@ func (h *HistoryRequest) CheckHistoryReq(db *gorm.DB) ([]HandcupIdResponse, erro
 		Group("group_id").
 		Find(&respData)
 
-	fmt.Println("DB內已搜尋到的資料:", respData)
+	log.Println("DB內已搜尋到的資料:", respData)
 
 	// 如果在 History requests 內有資料
 	if len(respData) != 0 {
@@ -102,7 +101,7 @@ func (h *HistoryRequest) findHandcupId(db *gorm.DB, groupId uint32) []HandcupIdR
 
 func (h *HistoryRequest) SaveHistoryReq(db *gorm.DB) (*HistoryRequest, error) {
 	var err error
-	fmt.Println(&h)
+	log.Println(&h)
 	err = db.Debug().Create(&h).Error
 	if err != nil {
 		return &HistoryRequest{}, err
