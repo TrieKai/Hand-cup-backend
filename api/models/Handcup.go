@@ -28,14 +28,17 @@ type HandcupInfo struct {
 }
 
 type HandcupRespData struct {
-	PlaceId       string             `json:"place_id"`
-	Name          string             `json:"name"`
-	Latitude      float64            `json:"latitude"`
-	Longitude     float64            `json:"longitude"`
-	Rating        float32            `json:"rating"`
-	RatingsTotal  int                `json:"ratings_total"`
-	Views         int                `json:"views"`
-	ImageUrl      string             `json:"image_url"`
+	PlaceId      string  `json:"place_id"`
+	Name         string  `json:"name"`
+	Latitude     float64 `json:"latitude"`
+	Longitude    float64 `json:"longitude"`
+	Rating       float32 `json:"rating"`
+	RatingsTotal int     `json:"ratings_total"`
+	Views        int     `json:"views"`
+	ImageUrl     string  `json:"image_url"`
+}
+
+type handcupDetailRespData struct {
 	Reviews       []maps.PlaceReview `json:"reviews"`
 	Price_level   int                `json:"price_level"`
 	Website       string             `json:"website"`

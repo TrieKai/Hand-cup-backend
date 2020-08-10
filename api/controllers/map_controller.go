@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"handCup-project-backend/api/models"
 	"handCup-project-backend/api/responses"
@@ -11,10 +10,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/gorilla/mux"
 	"googlemaps.github.io/maps"
 )
 
@@ -58,18 +56,6 @@ type fakeCoordinate struct {
 // var respDataList = []models.HandcupRespData{} // 要回傳的總資料群
 
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Expose-Headers", "*")
-	if r.Method == "OPTIONS" {
-		log.Println("OPTIONS")
-		responses.JSON(w, http.StatusOK, "success")
-		return
-	}
-
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
@@ -108,15 +94,7 @@ func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *Server) handleGoogleMap(parms handleMapParms) {
-	key, err := server.loadGoogleKey()
-	if err != nil {
-		log.Println("Load API key fatal error: %s", err)
-	}
-
-	c, err := maps.NewClient(maps.WithAPIKey(key))
-	if err != nil {
-		log.Println("Connect client fatal error: %s", err)
-	}
+	c := server.googleAPIAuth()
 
 	location := &maps.LatLng{Lat: parms.location.Lat, Lng: parms.location.Lng}
 	distance := parms.distance
@@ -196,23 +174,13 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 		})
 	} else {
 		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-		server.handleResponses(parms.w, http.StatusOK, respDataList)
+		responses.JSON(parms.w, http.StatusOK, respDataList)
 	}
 }
 
 func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	HistoryRequest := models.HistoryRequest{}
 	handcupInfo := models.HandcupInfo{}
-
-	key, err := server.loadGoogleKey()
-	if err != nil {
-		log.Println("Load API key fatal error: %s", err)
-	}
-
-	c, err := maps.NewClient(maps.WithAPIKey(key))
-	if err != nil {
-		log.Println("Connect client fatal error: %s", err)
-	}
 
 	g := HistoryRequest.GetGroupHisReqByGId(server.DB, parms.groupId)
 	log.Println("重新要一次GOOGLE API! 經度: %v, 緯度: %v", g.ReqLatitude, g.ReqLongitude)
@@ -224,6 +192,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	if len(parms.nextToken) != 0 {
 		r.PageToken = parms.nextToken
 	}
+	c := server.googleAPIAuth()
 	resp, err := c.NearbySearch(context.Background(), r)
 	if err != nil {
 		log.Println("Request nearby search fatal error: %s", err)
@@ -297,7 +266,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 		})
 	} else {
 		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-		server.handleResponses(parms.w, http.StatusOK, respDataList)
+		responses.JSON(parms.w, http.StatusOK, respDataList)
 	}
 }
 
@@ -338,7 +307,7 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 		server.handleUpdateGoogleMap(t) // Call handleUpdateGoogleMap func
 	} else {
 		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
-		server.handleResponses(parms.w, http.StatusOK, respDataList)
+		responses.JSON(parms.w, http.StatusOK, respDataList)
 	}
 }
 
@@ -393,38 +362,15 @@ func (server *Server) requestPhoto(ref string) string {
 	return finalURL
 }
 
-func (server *Server) loadGoogleKey() (string, error) {
-	var err error
-	err = godotenv.Load()
+func (server *Server) GetPlaceDetail(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	c := server.googleAPIAuth()
+	d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: vars["placeId"]})
 	if err != nil {
-		log.Println("Error getting env, not comming through %v", err)
-		return "", errors.New("maps: destination missing")
+		println("Place detail error:", err)
+		formattedError := formaterror.FormatError(err.Error())
+		responses.ERROR(w, http.StatusInternalServerError, formattedError)
 	}
 
-	return os.Getenv("GOOGLE_MAP_API_KEY"), nil
-}
-
-func (server *Server) handleResponses(w http.ResponseWriter, statusCode int, resp []models.HandcupRespData) {
-	key, err := server.loadGoogleKey()
-	if err != nil {
-		log.Println("Load API key fatal error: %s", err)
-	}
-	c, err := maps.NewClient(maps.WithAPIKey(key))
-	if err != nil {
-		log.Println("Connect client fatal error: %s", err)
-	}
-
-	for i, r := range resp {
-		d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: r.PlaceId})
-		if err != nil {
-			println(err)
-		}
-		resp[i].Price_level = d.PriceLevel
-		resp[i].Reviews = d.Reviews
-		resp[i].Website = d.Website
-		if d.OpeningHours != nil {
-			resp[i].Opening_hours = d.OpeningHours
-		}
-	}
-	responses.JSON(w, statusCode, resp)
+	responses.JSON(w, http.StatusOK, d)
 }
