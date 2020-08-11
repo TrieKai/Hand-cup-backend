@@ -15,7 +15,7 @@ type Response struct {
 
 func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.WriteHeader(statusCode)
-	fmt.Println("抓到JSON囉:", data)
+	fmt.Println("JSON回覆:", data)
 	// TODO: Response marshal json
 	// respData := Response{}
 	// respData.Header.Status = statusCode

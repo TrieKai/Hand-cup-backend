@@ -24,7 +24,6 @@ func (s *Server) initializeRoutes() {
 	s.Router.HandleFunc("/posts/{id}", middlewares.SetMiddlewareAuthentication(s.DeletePost)).Methods("DELETE")
 
 	// Handcup routes
-	s.Router.HandleFunc("/map", middlewares.SetMiddlewareJSON(s.GetHandcupList)).Methods("POST")
-	s.Router.HandleFunc("/map", middlewares.SetMiddlewareJSON(s.GetHandcupList)).Methods("OPTIONS")
-	s.Router.HandleFunc("/map/{placeId}", middlewares.SetMiddlewareJSON(s.GetPlaceDetail)).Methods("GET")
+	s.Router.HandleFunc("/map", middlewares.SetMiddlewareJSON(s.GetHandcupList)).Methods("POST", "OPTIONS")
+	s.Router.HandleFunc("/map/{placeId}", middlewares.SetMiddlewareJSON(s.GetPlaceDetail)).Methods("GET", "OPTIONS")
 }
