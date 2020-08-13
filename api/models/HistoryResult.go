@@ -144,16 +144,16 @@ func (h *HistoryRequest) GetGroupHisReqByGId(db *gorm.DB, groupId uint32) CheckH
 	return respData
 }
 
-// func (h *HistoryRequest) GetIDByHandcupID(db *gorm.DB, hId uint32) uint32 {
-// 	var id uint32
+func (h *HistoryRequest) GetIDByHandcupID(db *gorm.DB, hId uint32) uint32 {
+	var id uint32
 
-// 	db.
-// 		Table("history_requests").
-// 		Select("id").
-// 		Where("handcup_id = ?", hId)
+	db.
+		Table("history_requests").
+		Select("id").
+		Where("handcup_id = ?", hId)
 
-// 	return id
-// }
+	return id
+}
 
 // func (h *HistoryRequest) FindHistoryRequestByID(db *gorm.DB, pid uint64) (*HistoryRequest, error) {
 // 	var err error
@@ -170,16 +170,29 @@ func (h *HistoryRequest) GetGroupHisReqByGId(db *gorm.DB, groupId uint32) CheckH
 // 	return h, nil
 // }
 
-func (h *HistoryRequest) UpdateAHistoryRequest(db *gorm.DB) (*HistoryRequest, error) {
-	var err error
-	err = db.Debug().Model(&HistoryRequest{}).Where("id = ?", h.ID).Updates(HistoryRequest{Distance: h.Distance, UpdateTime: time.Now()}).Error
-	if err != nil {
-		return &HistoryRequest{}, err
-	}
-	if h.ID != 0 {
-		err = db.Debug().Model(&HandcupInfo{}).Where("id = ?", h.HandcupId).Take(&h.HandcupInfo).Error
+func (h *HistoryRequest) UpdateAHistoryRequest(db *gorm.DB, groupId uint32) (*HistoryRequest, error) {
+	var resp []HandcupIdResponse
+	// Select 是否有同 group, handcup_id
+	db.Table("history_requests").Where("group_id = ? AND handcup_id = ?", groupId, h.HandcupId).Find(&resp)
+	if len(resp) == 0 {
+		// 如果此 group 沒有這飲料店就新增資訊
+		log.Println("此區域新增飲料店囉 HandcupId: ", h.HandcupId)
+		var err error
+		err = db.Debug().Create(&h).Error
 		if err != nil {
 			return &HistoryRequest{}, err
+		}
+	} else {
+		var err error
+		err = db.Debug().Model(&HistoryRequest{}).Where("id = ?", h.ID).Updates(HistoryRequest{Distance: h.Distance, UpdateTime: time.Now()}).Error
+		if err != nil {
+			return &HistoryRequest{}, err
+		}
+		if h.ID != 0 {
+			err = db.Debug().Model(&HandcupInfo{}).Where("id = ?", h.HandcupId).Take(&h.HandcupInfo).Error
+			if err != nil {
+				return &HistoryRequest{}, err
+			}
 		}
 	}
 	return h, nil

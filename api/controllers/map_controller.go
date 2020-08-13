@@ -53,7 +53,7 @@ type fakeCoordinate struct {
 	lng float64
 }
 
-// var respDataList = []models.HandcupRespData{} // 要回傳的總資料群
+var keyword = "飲料店"
 
 func (server *Server) GetHandcupList(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
@@ -101,7 +101,7 @@ func (server *Server) handleGoogleMap(parms handleMapParms) {
 	r := &maps.NearbySearchRequest{
 		Location: location,
 		Radius:   distance,
-		Keyword:  "飲料店",
+		Keyword:  keyword,
 	}
 	// log.Println(parms.location.Lat, parms.location.Lng, parms.distance)
 	if len(parms.nextToken) != 0 {
@@ -183,11 +183,11 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 	handcupInfo := models.HandcupInfo{}
 
 	g := HistoryRequest.GetGroupHisReqByGId(server.DB, parms.groupId)
-	log.Println("重新要一次GOOGLE API! 經度: %v, 緯度: %v", g.ReqLatitude, g.ReqLongitude)
+	log.Println("重新要一次GOOGLE API! 經度: ", g.ReqLatitude, "緯度: ", g.ReqLongitude)
 	r := &maps.NearbySearchRequest{
 		Location: &maps.LatLng{Lat: g.ReqLatitude, Lng: g.ReqLongitude},
 		Radius:   g.Distance,
-		Keyword:  "飲料店",
+		Keyword:  keyword,
 	}
 	if len(parms.nextToken) != 0 {
 		r.PageToken = parms.nextToken
@@ -207,6 +207,7 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 
 	for _, s := range resp.Results {
 		handcupInfo = server.handleHandcupInfoData(s) // 將 Google map API 的值塞入 handcupInfo 中
+		h, _ := handcupInfo.FindHandcupInfoByPlaceID(server.DB, s.PlaceID)
 		// 處理要回傳給前端的資料
 		respData := models.HandcupRespData{
 			PlaceId:      handcupInfo.PlaceId,
@@ -215,12 +216,12 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 			Longitude:    handcupInfo.Longitude,
 			Rating:       handcupInfo.Rating,
 			RatingsTotal: handcupInfo.RatingsTotal,
+			Views:        h.Views, // DB 內的 views
 			ImageUrl:     handcupInfo.ImageUrl,
 		}
 		respDataList = append(respDataList, respData) // 把資料塞進 respDataList 中
 
-		h, _ := handcupInfo.FindHandcupInfoByPlaceID(server.DB, s.PlaceID)
-		// 如果資料庫內有這筆資訊
+		// 如果資料庫內 [handcup_infos] 有這飲料店資訊
 		if h.ID != 0 {
 			handcupInfo.ID = h.ID
 			handcupInfoUpdated, err := handcupInfo.UpdateAHandcupInfo(server.DB, h.ID)
@@ -231,9 +232,14 @@ func (server *Server) handleUpdateGoogleMap(parms handleUpdateMapParms) {
 			}
 
 			log.Println("我改飲料店資訊了喔", handcupInfoUpdated)
+			HistoryRequest.ID = HistoryRequest.GetIDByHandcupID(server.DB, handcupInfoUpdated.ID)
 			HistoryRequest.GroupId = g.GroupId
-			HistoryRequest.ID = handcupInfoUpdated.ID
-			HistoryRequest.UpdateAHistoryRequest(server.DB)
+			HistoryRequest.HandcupId = handcupInfoUpdated.ID
+			HistoryRequest.ReqLatitude = g.ReqLatitude
+			HistoryRequest.ReqLongitude = g.ReqLongitude
+			HistoryRequest.Distance = g.Distance
+			HistoryRequest.Keyword = r.Keyword
+			HistoryRequest.UpdateAHistoryRequest(server.DB, g.GroupId)
 		} else {
 			handcupInfo.ID = handcupInfo.FindLatestID(server.DB) + 1
 			// 將 Google API 的資料存入 DB [handcup_infos]
@@ -281,32 +287,32 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 		respDataList = parms.respDataList
 	}
 
+	maxUpdateTime := parms.handcupIdResponse[0].UpdateTime
+	// To find max update_time from ReqHistory
 	for _, h := range parms.handcupIdResponse {
-		thresholdTime := h.UpdateTime.AddDate(0, 0, 7) // Add 7 days
-		// 設定超過七天需要更新資訊
-		if time.Now().After(thresholdTime) {
-			log.Println("這筆資料超過七天啦! ID:", h.HandcupId)
-			timeIsExpire = true
-		} else {
-			log.Println("Group ID:", h.GroupId)
-			log.Println("Handcup ID:", h.HandcupId)
-			log.Println("Updata time:", h.UpdateTime)
-			resp, err := handcupInfo.FindHandcupInfoByID(server.DB, h.HandcupId) // Get handcup infomation by handcup_id
-			if err != nil {
-				log.Println("為甚麼會錯:", err)
-			}
-
-			// log.Println("飲料店資料抓到你啦:", resp)
-			respDataList = append(respDataList, resp) // 把資料塞進 respDataList 中
+		if maxUpdateTime.After(h.UpdateTime) {
+			maxUpdateTime = h.UpdateTime
 		}
 	}
-
-	// 如果資料過期
-	if timeIsExpire {
+	log.Println("此 group 最新更新時間: ", maxUpdateTime)
+	thresholdTime := maxUpdateTime.AddDate(0, 0, 7) // Add 7 days
+	if time.Now().After(thresholdTime) {
+		// 只要 ReqHistory 最新的 update_time 超過七天就需要更新資訊
+		log.Println("Group_id: ", parms.handcupIdResponse[0].GroupId, "資料超過七天啦!")
 		t := handleUpdateMapParms{location: parms.location, r: parms.r, w: parms.w, groupId: parms.handcupIdResponse[0].GroupId}
 		server.handleUpdateGoogleMap(t) // Call handleUpdateGoogleMap func
 	} else {
-		// parms.w.Header().Set("Access-Control-Allow-Origin", "*")
+		// 反之直接撈 DB 資料
+		for _, h := range parms.handcupIdResponse {
+			log.Println("Group ID: ", h.GroupId)
+			log.Println("Handcup ID: ", h.HandcupId)
+			log.Println("Updata time: ", h.UpdateTime)
+			resp, err := handcupInfo.FindHandcupInfoByID(server.DB, h.HandcupId) // Get handcup infomation by handcup_id
+			if err != nil {
+				log.Println("為甚麼會錯: ", err)
+			}
+			respDataList = append(respDataList, resp) // 把資料塞進 respDataList 中
+		}
 		responses.JSON(parms.w, http.StatusOK, respDataList)
 	}
 }
@@ -357,7 +363,7 @@ func (server *Server) requestPhoto(ref string) string {
 
 	// The Request in the Response is the last URL the
 	finalURL := resp.Request.URL.String()
-	log.Println("The photo url you ended up at is: %v\n", finalURL)
+	log.Println("The photo url you ended up at is: \n", finalURL)
 
 	return finalURL
 }
