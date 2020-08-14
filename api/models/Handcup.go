@@ -99,6 +99,12 @@ func (h *HandcupInfo) FindHandcupInfoByID(db *gorm.DB, hid uint32) (HandcupRespD
 func (h *HandcupInfo) FindHandcupInfoByPlaceID(db *gorm.DB, pid string) (HandcupInfo, error) {
 	var err error
 	handcupInfo := HandcupInfo{}
+	// Add 1 views
+	err = db.Model(&handcupInfo).Where("place_id = ?", pid).Take(&handcupInfo).UpdateColumn("views", gorm.Expr("views + ?", 1)).Error
+	if err != nil {
+		return handcupInfo, err
+	}
+	// Find handcup infomation
 	err = db.Debug().Table("handcup_infos").Where("place_id = ?", pid).Find(&handcupInfo).Error
 	if err != nil {
 		return handcupInfo, err
@@ -106,7 +112,6 @@ func (h *HandcupInfo) FindHandcupInfoByPlaceID(db *gorm.DB, pid string) (Handcup
 	if gorm.IsRecordNotFoundError(err) {
 		return handcupInfo, errors.New("HandcupInfo Not Found")
 	}
-	db.Model(&HandcupInfo{}).Where("place_id = ?", pid).Take(&HandcupInfo{}).UpdateColumn("views", gorm.Expr("views + ?", 1)) // Add 1 view
 
 	return handcupInfo, err
 }
