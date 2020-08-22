@@ -26,4 +26,7 @@ func (s *Server) initializeRoutes() {
 	// Handcup routes
 	s.Router.HandleFunc("/map", middlewares.SetMiddlewareJSON(s.GetHandcupList)).Methods("POST", "OPTIONS")
 	s.Router.HandleFunc("/map/{placeId}", middlewares.SetMiddlewareJSON(s.GetPlaceDetail)).Methods("GET", "OPTIONS")
+
+	// Upload routes
+	s.Router.HandleFunc("/upload", middlewares.SetMiddlewareJSON(s.UploadFile)).Methods("POST", "OPTIONS")
 }
