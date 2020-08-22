@@ -290,7 +290,7 @@ func (server *Server) handleHistoryReq(parms saveResultsParms) {
 	maxUpdateTime := parms.handcupIdResponse[0].UpdateTime
 	// To find max update_time from ReqHistory
 	for _, h := range parms.handcupIdResponse {
-		if maxUpdateTime.After(h.UpdateTime) {
+		if h.UpdateTime.After(maxUpdateTime) {
 			maxUpdateTime = h.UpdateTime
 		}
 	}
