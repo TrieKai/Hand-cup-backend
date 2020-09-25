@@ -9,6 +9,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 type favReqData struct {
@@ -39,4 +42,22 @@ func (server *Server) CreateFavorites(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Location", fmt.Sprintf("%s%s/%d", r.Host, r.RequestURI, favCreated.ID))
 	responses.JSON(w, http.StatusCreated, favCreated)
+}
+
+func (server *Server) DeleteFavorites(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	favorites := models.Favorites{}
+	uid, err := strconv.ParseUint(vars["user_id"], 10, 32)
+	if err != nil {
+		responses.ERROR(w, http.StatusBadRequest, err)
+		return
+	}
+	placeID := vars["place_id"]
+	_, err = favorites.DeleteFavorite(server.DB, placeID, uint32(uid))
+	if err != nil {
+		responses.ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.Header().Set("Entity", fmt.Sprintf("%d", uid))
+	responses.JSON(w, http.StatusNoContent, "")
 }

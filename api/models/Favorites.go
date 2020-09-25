@@ -30,3 +30,12 @@ func (f *Favorites) InitData(placeID string, userID uint32) {
 	f.CreateTime = time.Now()
 	f.UpdateTime = time.Now()
 }
+
+func (f *Favorites) DeleteFavorite(db *gorm.DB, place_id string, uid uint32) (int64, error) {
+	db = db.Debug().Model(&User{}).Where("place_id = ? and user_id = ?", place_id, uid).Take(&Favorites{}).Delete(&Favorites{})
+	if db.Error != nil {
+		return 0, db.Error
+	}
+
+	return db.RowsAffected, nil
+}
