@@ -14,6 +14,16 @@ type Favorites struct {
 	UpdateTime time.Time `gorm:"default:CURRENT_TIMESTAMP;not null" json:"update_time"`
 }
 
+func (f *Favorites) GetFavorites(db *gorm.DB, uid uint32) (*[]Favorites, error) {
+	var err error
+	favorites := []Favorites{}
+	err = db.Debug().Model(&Favorites{}).Find(&favorites).Error
+	if err != nil {
+		return &[]Favorites{}, err
+	}
+	return &favorites, err
+}
+
 func (f *Favorites) SaveFavorite(db *gorm.DB) (*Favorites, error) {
 	var err error
 	err = db.Debug().Create(&f).Error

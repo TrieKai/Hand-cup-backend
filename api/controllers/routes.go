@@ -18,6 +18,7 @@ func (s *Server) initializeRoutes() {
 
 	// TODO: Add authentication
 	// Favorites routes
+	s.Router.HandleFunc("/favorites/{user_id}", middlewares.SetMiddlewareJSON(s.GetFavorites)).Methods("GET", "OPTIONS")
 	s.Router.HandleFunc("/favorites", middlewares.SetMiddlewareJSON(s.CreateFavorites)).Methods("POST", "OPTIONS")
 	s.Router.HandleFunc("/favorites/{user_id}/{place_id}", middlewares.SetMiddlewareJSON(s.DeleteFavorites)).Methods("DELETE", "OPTIONS")
 

@@ -19,6 +19,22 @@ type favReqData struct {
 	UserID  uint32 `json:"userId"`
 }
 
+func (server *Server) GetFavorites(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	favorite := models.Favorites{}
+	uid, err := strconv.ParseUint(vars["user_id"], 10, 32)
+	if err != nil {
+		responses.ERROR(w, http.StatusBadRequest, err)
+		return
+	}
+	favorites, err := favorite.GetFavorites(server.DB, uint32(uid))
+	if err != nil {
+		responses.ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
+	responses.JSON(w, http.StatusOK, favorites)
+}
+
 func (server *Server) CreateFavorites(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
