@@ -15,7 +15,7 @@ import (
 type User struct {
 	ID        uint32    `gorm:"primary_key;auto_increment" json:"id"`
 	UserID    string    `gorm:"size:255;not null;unique" json:"userId"`
-	Nickname  string    `gorm:"size:255;not null;unique" json:"nickname"`
+	Name      string    `gorm:"size:255;not null;unique" json:"name"`
 	Email     string    `gorm:"size:100;not null;unique" json:"email"`
 	Password  string    `gorm:"size:100;not null;" json:"password"`
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
@@ -41,7 +41,7 @@ func (u *User) BeforeSave() error {
 
 func (u *User) Prepare() {
 	u.ID = 0
-	u.Nickname = html.EscapeString(strings.TrimSpace(u.Nickname))
+	u.Name = html.EscapeString(strings.TrimSpace(u.Name))
 	u.Email = html.EscapeString(strings.TrimSpace(u.Email))
 	u.CreatedAt = time.Now()
 	u.UpdatedAt = time.Now()
@@ -50,8 +50,8 @@ func (u *User) Prepare() {
 func (u *User) Validate(action string) error {
 	switch strings.ToLower(action) {
 	case "update":
-		if u.Nickname == "" {
-			return errors.New("Required Nickname")
+		if u.Name == "" {
+			return errors.New("Required Name")
 		}
 		if u.Password == "" {
 			return errors.New("Required Password")
@@ -80,8 +80,8 @@ func (u *User) Validate(action string) error {
 		if u.UserID == "" {
 			return errors.New("Required UserID")
 		}
-		if u.Nickname == "" {
-			return errors.New("Required Nickname")
+		if u.Name == "" {
+			return errors.New("Required Name")
 		}
 		if u.Password == "" {
 			return errors.New("Required Password")
@@ -97,7 +97,6 @@ func (u *User) Validate(action string) error {
 }
 
 func (u *User) SaveUser(db *gorm.DB) (*User, error) {
-
 	var err error
 	err = db.Debug().Create(&u).Error
 	if err != nil {
@@ -138,7 +137,7 @@ func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumns(
 		map[string]interface{}{
 			"password":  u.Password,
-			"nickname":  u.Nickname,
+			"name":      u.Name,
 			"email":     u.Email,
 			"update_at": time.Now(),
 		},
