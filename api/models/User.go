@@ -14,6 +14,7 @@ import (
 
 type User struct {
 	ID        uint32    `gorm:"primary_key;auto_increment" json:"id"`
+	UserID    string    `gorm:"size:255;not null;unique" json:"userId"`
 	Nickname  string    `gorm:"size:255;not null;unique" json:"nickname"`
 	Email     string    `gorm:"size:100;not null;unique" json:"email"`
 	Password  string    `gorm:"size:100;not null;" json:"password"`
@@ -61,8 +62,8 @@ func (u *User) Validate(action string) error {
 		if err := checkmail.ValidateFormat(u.Email); err != nil {
 			return errors.New("Invalid Email")
 		}
-
 		return nil
+
 	case "login":
 		if u.Password == "" {
 			return errors.New("Required Password")
@@ -76,6 +77,9 @@ func (u *User) Validate(action string) error {
 		return nil
 
 	default:
+		if u.UserID == "" {
+			return errors.New("Required UserID")
+		}
 		if u.Nickname == "" {
 			return errors.New("Required Nickname")
 		}

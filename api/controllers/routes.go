@@ -6,6 +6,9 @@ func (s *Server) initializeRoutes() {
 	// Home Route
 	s.Router.HandleFunc("/", middlewares.SetMiddlewareJSON(s.Home)).Methods("GET")
 
+	// Sign up Route
+	s.Router.HandleFunc("/signup", middlewares.SetMiddlewareJSON(s.SignUp)).Methods("POST", "OPTIONS")
+
 	// Login Route
 	s.Router.HandleFunc("/login", middlewares.SetMiddlewareJSON(s.Login)).Methods("POST")
 
