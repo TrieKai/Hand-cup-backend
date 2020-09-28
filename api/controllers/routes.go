@@ -22,6 +22,11 @@ func (s *Server) initializeRoutes() {
 	s.Router.HandleFunc("/favorites", middlewares.SetMiddlewareJSON(s.CreateFavorites)).Methods("POST", "OPTIONS")
 	s.Router.HandleFunc("/favorites/{user_id}/{place_id}", middlewares.SetMiddlewareJSON(s.DeleteFavorites)).Methods("DELETE", "OPTIONS")
 
+	// Visited routes
+	s.Router.HandleFunc("/visited/{user_id}", middlewares.SetMiddlewareJSON(s.GetVisiteds)).Methods("GET", "OPTIONS")
+	s.Router.HandleFunc("/visited", middlewares.SetMiddlewareJSON(s.CreateVisited)).Methods("POST", "OPTIONS")
+	s.Router.HandleFunc("/visited/{user_id}/{place_id}", middlewares.SetMiddlewareJSON(s.DeleteVisited)).Methods("DELETE", "OPTIONS")
+
 	// Posts routes
 	s.Router.HandleFunc("/posts", middlewares.SetMiddlewareJSON(s.CreatePost)).Methods("POST")
 	s.Router.HandleFunc("/posts", middlewares.SetMiddlewareJSON(s.GetPosts)).Methods("GET")
