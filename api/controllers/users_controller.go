@@ -104,7 +104,6 @@ func (server *Server) UpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *Server) DeleteUser(w http.ResponseWriter, r *http.Request) {
-
 	vars := mux.Vars(r)
 
 	user := models.User{}

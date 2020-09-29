@@ -68,6 +68,9 @@ func (u *User) Validate(action string) error {
 		if u.Password == "" {
 			return errors.New("Required Password")
 		}
+		if u.UserID == "" {
+			return errors.New("Required UserID")
+		}
 		if u.Email == "" {
 			return errors.New("Required Email")
 		}
@@ -153,9 +156,7 @@ func (u *User) UpdateAUser(db *gorm.DB, uid string) (*User, error) {
 }
 
 func (u *User) DeleteAUser(db *gorm.DB, uid string) (int64, error) {
-
-	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).Delete(&User{})
-
+	db = db.Debug().Model(&User{}).Where("user_id = ?", uid).Take(&User{}).Delete(&User{})
 	if db.Error != nil {
 		return 0, db.Error
 	}
