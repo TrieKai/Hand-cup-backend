@@ -127,14 +127,13 @@ func (u *User) FindUserByID(db *gorm.DB, uid string) (*User, error) {
 	return u, err
 }
 
-func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
-
+func (u *User) UpdateAUser(db *gorm.DB, uid string) (*User, error) {
 	// To hash the password
 	err := u.BeforeSave()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
-	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumns(
+	db = db.Debug().Model(&User{}).Where("user_id = ?", uid).Take(&User{}).UpdateColumns(
 		map[string]interface{}{
 			"password":  u.Password,
 			"name":      u.Name,
@@ -146,14 +145,14 @@ func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 		return &User{}, db.Error
 	}
 	// This is the display the updated user
-	err = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&u).Error
+	err = db.Debug().Model(&User{}).Where("user_id = ?", uid).Take(&u).Error
 	if err != nil {
 		return &User{}, err
 	}
 	return u, nil
 }
 
-func (u *User) DeleteAUser(db *gorm.DB, uid uint32) (int64, error) {
+func (u *User) DeleteAUser(db *gorm.DB, uid string) (int64, error) {
 
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).Delete(&User{})
 

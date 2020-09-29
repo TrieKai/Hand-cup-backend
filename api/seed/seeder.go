@@ -53,7 +53,7 @@ func Load(db *gorm.DB) {
 		if err != nil {
 			log.Fatalf("cannot seed users table: %v", err)
 		}
-		posts[i].AuthorID = users[i].ID
+		posts[i].AuthorID = users[i].UserID
 
 		err = db.Debug().Model(&models.Post{}).Create(&posts[i]).Error
 		if err != nil {
