@@ -88,13 +88,19 @@ func (server *Server) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		responses.ERROR(w, http.StatusUnauthorized, errors.New(http.StatusText(http.StatusUnauthorized)))
 		return
 	}
-	user.Prepare()
-	err = user.Validate("update")
-	if err != nil {
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
-		return
+	// user.Prepare()
+
+	var updatedUser *models.User
+	if user.Password != "" {
+		err = user.Validate("update")
+		if err != nil {
+			responses.ERROR(w, http.StatusUnprocessableEntity, err)
+			return
+		}
+		updatedUser, err = user.UpdatePassword(server.DB, uid)
+	} else {
+		updatedUser, err = user.UpdateAUser(server.DB, uid)
 	}
-	updatedUser, err := user.UpdateAUser(server.DB, uid)
 	if err != nil {
 		formattedError := formaterror.FormatError(err.Error())
 		responses.ERROR(w, http.StatusInternalServerError, formattedError)

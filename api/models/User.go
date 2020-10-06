@@ -50,17 +50,8 @@ func (u *User) Prepare() {
 func (u *User) Validate(action string) error {
 	switch strings.ToLower(action) {
 	case "update":
-		if u.Name == "" {
-			return errors.New("Required Name")
-		}
 		if u.Password == "" {
 			return errors.New("Required Password")
-		}
-		if u.Email == "" {
-			return errors.New("Required Email")
-		}
-		if err := checkmail.ValidateFormat(u.Email); err != nil {
-			return errors.New("Invalid Email")
 		}
 		return nil
 
@@ -128,6 +119,24 @@ func (u *User) FindUserByID(db *gorm.DB, uid string) (*User, error) {
 }
 
 func (u *User) UpdateAUser(db *gorm.DB, uid string) (*User, error) {
+	db = db.Debug().Model(&User{}).Where("user_id = ?", uid).Take(&User{}).UpdateColumns(
+		map[string]interface{}{
+			"name":      u.Name,
+			"update_at": time.Now(),
+		},
+	)
+	if db.Error != nil {
+		return &User{}, db.Error
+	}
+	// This is the display the updated user
+	err := db.Debug().Model(&User{}).Where("user_id = ?", uid).Take(&u).Error
+	if err != nil {
+		return &User{}, err
+	}
+	return u, nil
+}
+
+func (u *User) UpdatePassword(db *gorm.DB, uid string) (*User, error) {
 	// To hash the password
 	err := u.BeforeSave()
 	if err != nil {
@@ -136,8 +145,6 @@ func (u *User) UpdateAUser(db *gorm.DB, uid string) (*User, error) {
 	db = db.Debug().Model(&User{}).Where("user_id = ?", uid).Take(&User{}).UpdateColumns(
 		map[string]interface{}{
 			"password":  u.Password,
-			"name":      u.Name,
-			"email":     u.Email,
 			"update_at": time.Now(),
 		},
 	)
