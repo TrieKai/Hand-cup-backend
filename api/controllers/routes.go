@@ -19,6 +19,9 @@ func (s *Server) initializeRoutes() {
 	s.Router.HandleFunc("/users/{id}", middlewares.SetMiddlewareJSON(middlewares.SetMiddlewareAuthentication(s.UpdateUser))).Methods("PUT", "OPTIONS")
 	s.Router.HandleFunc("/users/{id}", middlewares.SetMiddlewareAuthentication(s.DeleteUser)).Methods("DELETE", "OPTIONS")
 
+	// Reset password
+	s.Router.HandleFunc("/reset", middlewares.SetMiddlewareJSON(s.ResetPassword)).Methods("POST", "OPTIONS")
+
 	// TODO: Add authentication
 	// Favorites routes
 	s.Router.HandleFunc("/favorites/{user_id}", middlewares.SetMiddlewareJSON(s.GetFavorites)).Methods("GET", "OPTIONS")

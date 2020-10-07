@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 
 	"handCup-project-backend/api/auth"
 	"handCup-project-backend/api/models"
@@ -13,7 +15,14 @@ import (
 	formaterror "handCup-project-backend/api/utils"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
+
+type ResetPasswordReq struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Key      string `json:"key"`
+}
 
 func (server *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
@@ -131,4 +140,37 @@ func (server *Server) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Entity", fmt.Sprintf("%d", uid))
 	responses.JSON(w, http.StatusNoContent, "")
+}
+
+func (server *Server) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+	req := ResetPasswordReq{}
+	err = json.Unmarshal(body, &req)
+	if err != nil {
+		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	err = godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error getting env, not comming through %v", err)
+	}
+	if (os.Getenv("FIREBASE_KEY") == req.Key) && (req.Password != "") {
+		user := models.User{}
+		user.Password = req.Password
+		updatedUser, err := user.ResetPassword(server.DB, req.Email)
+		if err != nil {
+			formattedError := formaterror.FormatError(err.Error())
+			responses.ERROR(w, http.StatusInternalServerError, formattedError)
+			return
+		}
+		responses.JSON(w, http.StatusOK, updatedUser)
+	} else {
+		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
+		return
+	}
 }
