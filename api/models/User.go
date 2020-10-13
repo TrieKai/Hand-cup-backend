@@ -118,6 +118,18 @@ func (u *User) FindUserByID(db *gorm.DB, uid string) (*User, error) {
 	return u, err
 }
 
+func (u *User) FindUserByEmail(db *gorm.DB, email string) (*User, error) {
+	var err error
+	err = db.Debug().Model(User{}).Where("email = ?", email).Take(&u).Error
+	if err != nil {
+		return &User{}, err
+	}
+	if gorm.IsRecordNotFoundError(err) {
+		return &User{}, errors.New("User Not Found")
+	}
+	return u, err
+}
+
 func (u *User) UpdateAUser(db *gorm.DB, uid string) (*User, error) {
 	db = db.Debug().Model(&User{}).Where("user_id = ?", uid).Take(&User{}).UpdateColumns(
 		map[string]interface{}{

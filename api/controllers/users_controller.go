@@ -18,6 +18,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type SignUpReq struct {
+	UserID   string `json:"userId"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Type     string `json:"type"`
+}
+
 type ResetPasswordReq struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -28,6 +35,12 @@ func (server *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+	}
+	req := SignUpReq{}
+	err = json.Unmarshal(body, &req)
+	if err != nil {
+		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		return
 	}
 	user := models.User{}
 	err = json.Unmarshal(body, &user)
@@ -41,6 +54,21 @@ func (server *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 		responses.ERROR(w, http.StatusUnprocessableEntity, err)
 		return
 	}
+	if req.Type == "email" {
+		server.SaveUser(user, w, r)
+	} else if req.Type == "google" || req.Type == "facebook" {
+		userGotten, err := user.FindUserByEmail(server.DB, req.Email)
+		if err != nil {
+			server.SaveUser(user, w, r)
+		} else {
+			responses.JSON(w, http.StatusOK, userGotten)
+		}
+	} else {
+		responses.ERROR(w, http.StatusUnprocessableEntity, errors.New("Request type error"))
+	}
+}
+
+func (server *Server) SaveUser(user models.User, w http.ResponseWriter, r *http.Request) {
 	userCreated, err := user.SaveUser(server.DB)
 
 	if err != nil {
