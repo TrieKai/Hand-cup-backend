@@ -9,25 +9,20 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 )
 
 type visReqData struct {
 	PlaceID string `json:"placeId"`
-	UserID  uint32 `json:"userId"`
+	UserID  string `json:"userId"`
 }
 
 func (server *Server) GetVisiteds(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	visited := models.Visited{}
-	uid, err := strconv.ParseUint(vars["user_id"], 10, 32)
-	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
-		return
-	}
-	visiteds, err := visited.GetVisiteds(server.DB, uint32(uid))
+	uid := vars["user_id"]
+	visiteds, err := visited.GetVisiteds(server.DB, uid)
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
 		return
@@ -63,13 +58,9 @@ func (server *Server) CreateVisited(w http.ResponseWriter, r *http.Request) {
 func (server *Server) DeleteVisited(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	visited := models.Visited{}
-	uid, err := strconv.ParseUint(vars["user_id"], 10, 32)
-	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
-		return
-	}
 	placeID := vars["place_id"]
-	_, err = visited.DeleteVisited(server.DB, placeID, uint32(uid))
+	uid := vars["user_id"]
+	_, err := visited.DeleteVisited(server.DB, placeID, uid)
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
 		return

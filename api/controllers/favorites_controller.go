@@ -9,25 +9,20 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 )
 
 type favReqData struct {
 	PlaceID string `json:"placeId"`
-	UserID  uint32 `json:"userId"`
+	UserID  string `json:"userId"`
 }
 
 func (server *Server) GetFavorites(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	favorite := models.Favorites{}
-	uid, err := strconv.ParseUint(vars["user_id"], 10, 32)
-	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
-		return
-	}
-	favorites, err := favorite.GetFavorites(server.DB, uint32(uid))
+	uid := vars["user_id"]
+	favorites, err := favorite.GetFavorites(server.DB, uid)
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
 		return
@@ -63,13 +58,9 @@ func (server *Server) CreateFavorites(w http.ResponseWriter, r *http.Request) {
 func (server *Server) DeleteFavorites(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	favorites := models.Favorites{}
-	uid, err := strconv.ParseUint(vars["user_id"], 10, 32)
-	if err != nil {
-		responses.ERROR(w, http.StatusBadRequest, err)
-		return
-	}
 	placeID := vars["place_id"]
-	_, err = favorites.DeleteFavorite(server.DB, placeID, uint32(uid))
+	uid := vars["user_id"]
+	_, err := favorites.DeleteFavorite(server.DB, placeID, uid)
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
 		return
