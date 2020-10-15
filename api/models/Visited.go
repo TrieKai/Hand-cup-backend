@@ -17,7 +17,7 @@ type Visited struct {
 func (v *Visited) GetVisiteds(db *gorm.DB, uid string) (*[]Visited, error) {
 	var err error
 	visited := []Visited{}
-	err = db.Debug().Model(&Favorites{}).Where("user_id = ?", uid).Find(&visited).Error
+	err = db.Debug().Model(&Visited{}).Where("user_id = ?", uid).Find(&visited).Error
 	if err != nil {
 		return &[]Visited{}, err
 	}
