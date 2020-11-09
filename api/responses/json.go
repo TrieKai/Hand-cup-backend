@@ -8,34 +8,45 @@ import (
 
 type Response struct {
 	Header struct {
-		Status int `json:"status"`
+		Status string `json:"status"`
 	} `json:"header"`
-	Body interface{} `json:"body"`
+	Body struct {
+		Data interface{} `json:"data"`
+	} `json:"body"`
 }
 
 func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.WriteHeader(statusCode)
-	fmt.Println("JSON回覆:", data)
-	// TODO: Response marshal json
-	// respData := Response{}
-	// respData.Header.Status = statusCode
-	// respData.Body = data
-	// jsondata, _ := json.Marshal(respData)
-	// fmt.Println(jsondata)
-	err := json.NewEncoder(w).Encode(data)
+	respData := Response{}
+	respData.Header.Status = "success"
+	respData.Body.Data = data
+	fmt.Println("JSON回覆:", respData)
+	err := json.NewEncoder(w).Encode(respData)
 	if err != nil {
 		fmt.Fprintf(w, "%s", err.Error())
 	}
 }
 
 func ERROR(w http.ResponseWriter, statusCode int, err error) {
+	respData := Response{}
+	respData.Header.Status = "error"
 	if err != nil {
-		JSON(w, statusCode, struct {
+		w.WriteHeader(statusCode)
+		respData.Body.Data = struct {
 			Error string `json:"error"`
 		}{
 			Error: err.Error(),
-		})
+		}
+		err = json.NewEncoder(w).Encode(respData)
+		if err != nil {
+			fmt.Fprintf(w, "%s", err.Error())
+		}
 		return
 	}
-	JSON(w, http.StatusBadRequest, nil)
+	w.WriteHeader(http.StatusBadRequest)
+	respData.Body.Data = nil
+	err = json.NewEncoder(w).Encode(respData)
+	if err != nil {
+		fmt.Fprintf(w, "%s", err.Error())
+	}
 }
