@@ -66,5 +66,5 @@ func (server *Server) DeleteFavorites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Entity", fmt.Sprintf("%d", uid))
-	responses.JSON(w, http.StatusNoContent, "")
+	responses.JSON(w, http.StatusOK, "")
 }
