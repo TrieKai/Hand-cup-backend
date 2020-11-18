@@ -48,9 +48,14 @@ type reqData struct {
 	Distance  uint    `json:"distance"`
 }
 
-type fakeCoordinate struct {
-	lat float64
-	lng float64
+type myMapResp struct {
+	Lat          float64 `json:"latitude"`
+	Lng          float64 `json:"longitude"`
+	Name         string  `json:"name"`
+	Image        string  `json:"image"`
+	Rating       float32 `json:"rating"`
+	RatingsTotal int     `json:"ratings_total"`
+	Views        int     `json:"views"`
 }
 
 var keyword = "飲料店"
@@ -379,4 +384,62 @@ func (server *Server) GetPlaceDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responses.JSON(w, http.StatusOK, d)
+}
+
+func (server *Server) GetMyMapList(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userId := vars["userId"]
+
+	handcup := models.HandcupInfo{}
+	favorites := models.Favorites{}
+	fav, err := favorites.GetFavorites(server.DB, userId)
+	if err != nil {
+		println("MyMap favorite error:", err)
+	}
+	var favDetailList []myMapResp
+	for _, f := range *fav {
+		h, err := handcup.FindHandcupInfoByPlaceID(server.DB, f.PlaceID)
+		if err != nil {
+			println("MyMap fav handcup's detail error:", err)
+		}
+		favDetailList = append(favDetailList, myMapResp{
+			Lat:          h.Latitude,
+			Lng:          h.Longitude,
+			Name:         h.Name,
+			Image:        h.ImageUrl,
+			Rating:       h.Rating,
+			RatingsTotal: h.RatingsTotal,
+			Views:        h.Views,
+		})
+	}
+
+	visiteds := models.Visited{}
+	vis, err := visiteds.GetVisiteds(server.DB, userId)
+	if err != nil {
+		println("MyMap visited error:", err)
+	}
+	var visDetailList []myMapResp
+	for _, f := range *vis {
+		h, err := handcup.FindHandcupInfoByPlaceID(server.DB, f.PlaceID)
+		if err != nil {
+			println("MyMap vis handcup's detail error:", err)
+		}
+		visDetailList = append(visDetailList, myMapResp{
+			Lat:          h.Latitude,
+			Lng:          h.Longitude,
+			Name:         h.Name,
+			Image:        h.ImageUrl,
+			Rating:       h.Rating,
+			RatingsTotal: h.RatingsTotal,
+			Views:        h.Views,
+		})
+	}
+	var dataList struct {
+		Favorites []myMapResp `json:"favorites"`
+		Visiteds  []myMapResp `json:"visiteds"`
+	}
+	dataList.Favorites = favDetailList
+	dataList.Visiteds = visDetailList
+
+	responses.JSON(w, http.StatusOK, dataList)
 }
