@@ -376,7 +376,7 @@ func (server *Server) requestPhoto(ref string) string {
 func (server *Server) GetPlaceDetail(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	c := server.googleAPIAuth()
-	d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: vars["placeId"]})
+	d, err := c.PlaceDetails(context.Background(), &maps.PlaceDetailsRequest{PlaceID: vars["placeId"], Language: vars["language"]})
 	if err != nil {
 		println("Place detail error:", err)
 		formattedError := formaterror.FormatError(err.Error())
